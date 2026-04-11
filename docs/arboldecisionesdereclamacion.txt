@@ -1,0 +1,297 @@
+# Arbol de decisiones de la RECLAMACIÓN
+
+# Árbol de decisiones para los 3 escenarios del hackathon
+
+## Nodo 0. ¿Hay relato de consumo que pueda llevarse a reclamación?
+
+### Pregunta guía
+
+- ¿El usuario cuenta un problema con un **bien** o un **servicio** adquirido de un **productor, proveedor o comercializador**?
+
+### Sale del formato SIC porque exige identificar:
+
+- condiciones de la relación de consumo;
+- clase de producto adquirido o servicio prestado;
+- productor, proveedor o comercializador.
+
+### Variables mínimas a capturar
+
+- nombre del consumidor;
+- número de identificación;
+- domicilio o dirección de notificación;
+- nombre del productor/proveedor;
+- dirección de notificación del productor/proveedor.
+
+### Documento o soporte asociado
+
+- cédula del consumidor;
+- factura, contrato, extracto, pedido o cualquier soporte donde aparezca el proveedor.
+
+### Si la respuesta es **no**
+
+El caso no entra todavía al formulario, porque falta identificar una relación de consumo. El simulacro exige, además, que el sistema sepa decir cuándo **no aplica** la Ley 1480, por ejemplo si no hay relación de consumo con productor o proveedor.
+
+---
+
+## Nodo 1. ¿El caso trata de un bien o de un servicio?
+
+### Rama 1A. Bien
+
+Aquí entran, principalmente:
+
+- **producto defectuoso comprado en tienda física**;
+- también podría entrar un caso de publicidad engañosa sobre un bien;
+- o daño al bien en la prestación de un servicio, aunque este último no es uno de los tres escenarios mínimos.
+
+### Rama 1B. Servicio
+
+Aquí entran, principalmente:
+
+- **cobro indebido por servicio financiero**;
+- **incumplimiento de servicio de telecomunicaciones**;
+- y otros servicios donde pueda haber cláusula abusiva o publicidad engañosa.
+
+---
+
+# Rama 1A. Bien
+
+## Nodo 2A. ¿El problema principal es un defecto o falla del bien?
+
+### Si la respuesta es **sí**
+
+Estamos en el escenario del hackathon:
+
+- **(A) producto defectuoso comprado en tienda física**.
+
+### Variables que pide el formato SIC
+
+El formato exige consignar, como mínimo:
+
+- clase de producto adquirido;
+- identificación plena del bien;
+- tipo de bien;
+- especificaciones técnicas;
+- datos identificadores como IMEI para celulares;
+- lugar donde se adquirió;
+- productor, proveedor o comercializador;
+- precio pactado y/o pagado;
+- defecto o inconformidad del consumidor.
+
+### Traducción del árbol a preguntas
+
+1. ¿Qué producto compró exactamente?
+2. ¿Es un mueble, inmueble, vehículo u otro tipo de bien?
+3. ¿Cuál es la marca, modelo, referencia, serial o IMEI?
+4. ¿Dónde lo compró?
+5. ¿A qué proveedor o tienda?
+6. ¿Cuánto pagó?
+7. ¿Qué defecto presenta?
+8. ¿Desde cuándo ocurre la falla?
+9. ¿Qué derecho cree vulnerado o qué inconformidad tiene?
+
+### Soportes o documentos que debe pedir el sistema
+
+No todos aparecen nombrados literalmente en el formato, pero se desprenden de las variables exigidas:
+
+- factura o comprobante de compra;
+- soporte con IMEI, serial o referencia;
+- fotos o videos del defecto;
+- chats o correos con la tienda;
+- garantía, si existe.
+
+### Pretensiones posibles, según el formato SIC
+
+- que se cumpla la garantía;
+- que se repare el bien;
+- que se cambie el bien por uno nuevo o similar;
+- que se devuelva el dinero pagado.
+
+---
+
+## Nodo 2B. ¿El problema no es la falla del bien sino lo que le ofrecieron o informaron?
+
+### Si la respuesta es **sí**
+
+Se activa la subruta de **publicidad o información engañosa**.
+
+### Variables que pide el formato SIC
+
+- tipo de información recibida;
+- condiciones particulares de lo ofrecido;
+- motivos concretos de la inconformidad o falta de correspondencia entre lo ofrecido y lo recibido;
+- y expresamente indica que debe allegarse **prueba documental de la publicidad o información engañosa**.
+
+### Preguntas
+
+1. ¿Qué le prometieron exactamente?
+2. ¿Dónde vio esa oferta o información?
+3. ¿Qué recibió realmente?
+4. ¿En qué no coincide lo ofrecido con lo recibido?
+
+### Documento obligatorio según el formato
+
+- publicidad, anuncio, pantallazo, folleto, correo o prueba documental equivalente de la oferta engañosa.
+
+### Pretensión posible
+
+- reparación de perjuicios causados por la publicidad o información engañosa, con estimación del monto si es económica.
+
+---
+
+# Rama 1B. Servicio
+
+## Nodo 3A. ¿El problema principal es un cobro indebido en un servicio financiero?
+
+### Si la respuesta es **sí**
+
+Estamos en el escenario del hackathon:
+
+- **(B) cobro indebido por servicio financiero**.
+
+### Lo que sí permite extraer el formato SIC
+
+Aunque el formulario no dice expresamente “servicio financiero”, sí cubre cualquier **servicio prestado** y exige:
+
+- clase de servicio;
+- identificación del proveedor;
+- lugar donde se prestó o contrató;
+- precio pactado y/o pagado;
+- inconformidad del consumidor.
+
+### Preguntas del árbol
+
+1. ¿Qué entidad le prestó el servicio?
+2. ¿Qué producto o servicio financiero tenía?
+3. ¿Qué cobro considera indebido?
+4. ¿Por cuánto valor?
+5. ¿Cuándo se lo hicieron?
+6. ¿En qué soporte aparece el cobro?
+7. ¿Cuál es su inconformidad concreta?
+
+### Nodo 3A.1. ¿El cobro proviene del contrato?
+
+### Si **sí**, subruta de **cláusula abusiva**
+
+El formato exige:
+
+- tipo de contrato celebrado;
+- cláusulas cuyo contenido se estima abusivo;
+- demás datos relevantes e importantes del caso.
+
+### Preguntas
+
+- ¿Qué contrato firmó o aceptó?
+- ¿Qué cláusula o condición permitió ese cobro?
+- ¿Por qué considera que genera desequilibrio en su perjuicio?
+
+### Documento asociado
+
+- contrato, reglamento del producto o condiciones del servicio.
+
+### Nodo 3A.2. ¿El cobro proviene de una oferta o información que no coincidió con lo recibido?
+
+### Si **sí**, subruta de **publicidad o información engañosa**
+
+Se activa exactamente el mismo bloque del formato:
+
+- tipo de información recibida;
+- condiciones ofrecidas;
+- motivos de la inconformidad;
+- prueba documental de la publicidad engañosa.
+
+### Documento asociado
+
+- publicidad, correo comercial, simulación, folleto, chat promocional.
+
+### Soportes mínimos razonablemente necesarios
+
+Por derivación de las variables del formato:
+
+- extracto o soporte del cobro;
+- contrato o reglamento, si se discute base contractual;
+- respuesta o reclamación previa, si existe;
+- soporte publicitario, si la inconformidad es por oferta engañosa.
+
+### Pretensión posible según el formato
+
+- devolución del dinero pagado en forma indebida.
+
+---
+
+## Nodo 3B. ¿El problema principal es incumplimiento de servicio de telecomunicaciones?
+
+### Si la respuesta es **sí**
+
+Estamos en el escenario del hackathon:
+
+- **(C) incumplimiento de servicio de telecomunicaciones**.
+
+### Variables del formato SIC aplicables
+
+Como el formulario cubre “servicio prestado”, aquí deben capturarse:
+
+- clase de servicio;
+- identificación plena del servicio;
+- proveedor;
+- lugar o canal donde se contrató o se prestó;
+- precio pactado y/o pagado;
+- defecto o inconformidad del consumidor.
+
+### Preguntas del árbol
+
+1. ¿Qué operador le presta el servicio?
+2. ¿Qué servicio contrató: telefonía, internet, TV u otro?
+3. ¿Cómo se identifica el servicio: número de línea, cuenta, plan, referencia?
+4. ¿Dónde o por qué canal lo contrató?
+5. ¿Cuánto paga?
+6. ¿Cuál fue el incumplimiento: interrupción, mala calidad, cobro, instalación fallida, etc.?
+7. ¿Cuál es su inconformidad concreta?
+
+### Nodo 3B.1. ¿El incumplimiento deriva de lo prometido comercialmente?
+
+### Si **sí**, subruta de **publicidad o información engañosa**
+
+Se piden:
+
+- tipo de información recibida;
+- condiciones de lo ofrecido;
+- falta de correspondencia entre lo ofrecido y lo recibido;
+- prueba documental de la publicidad.
+
+### Nodo 3B.2. ¿El incumplimiento deriva de una condición contractual abusiva?
+
+### Si **sí**, subruta de **cláusula abusiva**
+
+Se piden:
+
+- tipo de contrato;
+- cláusulas abusivas;
+- demás datos relevantes.
+
+### Soportes o documentos que el sistema debe pedir
+
+Por derivación necesaria de las variables del formato:
+
+- factura del servicio;
+- contrato o condiciones del plan;
+- número de línea, cuenta o identificador del servicio;
+- radicados, chats, correos o evidencia del incumplimiento;
+- publicidad, si el reclamo es por oferta engañosa.
+
+### Pretensiones posibles
+
+- devolución de lo cobrado indebidamente;
+- reparación de perjuicios, si corresponde y se estiman;
+- cualquier pretensión clara, concreta y precisa compatible con el caso.
+
+---
+
+# Nodo transversal de pretensiones
+
+Independientemente del escenario, el árbol debe cerrar preguntando:
+
+1. ¿Qué solución concreta solicita?
+2. ¿La pretensión es económica?
+3. Si lo es, ¿a cuánto asciende?
+
+Esto sale del formato, que exige que las pretensiones se formulen de manera clara, separada, concreta y precisa, y que se estime el monto cuando exista pretensión económica. También indica que las pretensiones de la reclamación directa deben coincidir con las de la demanda.

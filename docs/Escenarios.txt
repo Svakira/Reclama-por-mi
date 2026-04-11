@@ -1,0 +1,80 @@
+# Escenarios
+
+**No aplica únicamente el Estatuto del Consumidor (Ley 1480 de 2011)**. En los tres escenarios del hackathon hay un **núcleo común** y, además, **regímenes especiales** según el sector y la competencia de la autoridad. La propia SIC distingue entre relaciones de consumo en general, financiación de compras y servicios de comunicaciones; y en telecomunicaciones señala expresamente que rige un régimen especial, aplicándose el régimen general de consumo solo en lo no previsto por ese régimen sectorial. 
+
+## 1. Núcleo común: sí aplica la Ley 1480, pero no sola
+
+Como base general, la Ley 1480 regula los derechos y obligaciones entre productores, proveedores y consumidores dentro de una relación de consumo. En sede jurisdiccional, la SIC conoce controversias derivadas de esas relaciones y ha dicho que la acción de protección al consumidor procede, entre otros, para exigir garantía, protección contractual frente a cláusulas abusivas, perjuicios por publicidad o información engañosa y otras vulneraciones a normas de protección al consumidor. Además, la SIC exige haber surtido la reclamación directa previa para demandar por garantía.
+
+En ese núcleo común, para sus escenarios, los artículos más relevantes de la Ley 1480 suelen ser estos:
+
+- **Art. 2**: ámbito de aplicación de la relación de consumo.
+- **Art. 3 y 23**: derecho a recibir información veraz, suficiente, precisa y oportuna; deber de información. La SIC los ha invocado expresamente en sanciones por fintech. ([Superintendencia de Industria y Comercio](https://sedeelectronica.sic.gov.co/noticias/superindustria-sanciona-con-mas-de-1000-smlmv-la-fintech-nanocred-colombia-sas-por-usura-infracciones-al-deber-de-informar-y-publicidad))
+- **Art. 7 y ss.**: garantía legal. La SIC explica que la garantía legal obliga a responder por calidad, idoneidad, seguridad y buen funcionamiento. ([Superintendencia de Industria y Comercio](https://sedeelectronica.sic.gov.co/temas/proteccion-al-consumidor/derechos-y-deberes/fallas-en-un-producto))
+- **Arts. 42 y 43**: cláusulas abusivas y protección contractual. La SIC los citó expresamente en instrucciones a plataformas fintech. ([Superintendencia de Industria y Comercio](https://sedeelectronica.sic.gov.co/noticias/superindustria-imparte-instrucciones-para-las-operaciones-de-financiacion-traves-de-medios-tecnologicos-fintech-0))
+- **Art. 58**: procedimiento jurisdiccional de protección al consumidor y reclamación directa previa. ([Superintendencia de Industria y Comercio](https://sedeelectronica.sic.gov.co/temas/proteccion-al-consumidor/derechos-y-deberes/fallas-en-un-producto))
+
+## 2. Escenario A: producto defectuoso comprado en tienda física
+
+Aquí **sí** el eje principal es la **Ley 1480**. La SIC ha dicho que productores y expendedores responden **solidaria y directamente** por la efectividad de la garantía, que la garantía legal está en el artículo 7, que en ausencia de término especial la garantía de productos nuevos es de **un año**, y que el consumidor debe acreditar la reclamación directa para acudir a la SIC o al juez. También ha precisado que el consumidor, en principio, debe demostrar el defecto, mientras el proveedor asume la carga de probar una causal de exoneración del artículo 16. ([Superintendencia de Industria y Comercio](https://sedeelectronica.sic.gov.co/temas/proteccion-al-consumidor/derechos-y-deberes/fallas-en-un-producto))
+
+Por tanto, en este escenario las normas principales son:
+
+- **Ley 1480 de 2011**, especialmente arts. **7, 10, 11, 16 y 58**. ([Superintendencia de Industria y Comercio](https://sedeelectronica.sic.gov.co/temas/proteccion-al-consumidor/derechos-y-deberes/fallas-en-un-producto))
+- Como fundamento constitucional general de protección al consumidor, la propia SIC remite a la **Constitución** al explicar la garantía, aunque en la práctica el desarrollo operativo está en la Ley 1480. ([Superintendencia de Industria y Comercio](https://sedeelectronica.sic.gov.co/temas/proteccion-al-consumidor/derechos-y-deberes/fallas-en-un-producto))
+
+## 3. Escenario B: cobro indebido por servicio financiero
+
+Aquí hay que diferenciar, porque **no siempre la SIC es la autoridad principal**.
+
+### 3.1. Si se trata de una entidad vigilada por la Superintendencia Financiera
+
+No basta con la Ley 1480. Aplica el **régimen especial de consumidor financiero**, cuyo eje es la **Ley 1328 de 2009**. La Superintendencia Financiera la presenta como la norma integradora del régimen de protección al consumidor financiero, y el Defensor del Consumidor Financiero tiene funciones legales de conocer y resolver quejas de los consumidores financieros. ([Superfinanciera](https://www.superfinanciera.gov.co/publicaciones/61636/normativaproteccion-al-consumidor-financierosobre-el-regimen-especifico-de-proteccion-al-consumidor-financieroley-de-proteccion-al-consumidor-financiero-61636/?utm_source=chatgpt.com))
+
+En ese caso, las normas base son:
+
+- **Ley 1328 de 2009**. ([Superfinanciera](https://www.superfinanciera.gov.co/publicaciones/61636/normativaproteccion-al-consumidor-financierosobre-el-regimen-especifico-de-proteccion-al-consumidor-financieroley-de-proteccion-al-consumidor-financiero-61636/?utm_source=chatgpt.com))
+- **Decreto 2555 de 2010**, en lo relativo a la Defensoría del Consumidor Financiero y al régimen operativo que la Superfinanciera compila como aplicable. ([Superfinanciera](https://www.superfinanciera.gov.co/publicaciones/10083873/normativaproteccion-para-el-consumidor-financiero-10083873/?utm_source=chatgpt.com))
+
+### 3.2. Si se trata de financiación de compras o fintech no vigilada por otra autoridad
+
+Aquí sí puede entrar la SIC. La propia SIC ha dicho que su intervención en el ámbito financiero está **limitada** a personas que ofrecen operaciones de crédito mediante sistemas de financiación **no vigiladas por la Superfinanciera**. También ha señalado que, en financiación de compras, es competente cuando en una relación de consumo se adquiere un bien o servicio a plazos y se cobra directa o indirectamente un interés. En 2023 instruyó a fintech no vigiladas con apoyo en la **Ley 1480**, la **Ley 45 de 1990** y el **Decreto 1074 de 2015**, y ha sancionado por usura, información insuficiente, publicidad engañosa, protección contractual y comercio electrónico. ([Superintendencia de Industria y Comercio](https://sedeelectronica.sic.gov.co/noticias/informate-como-consumidor-financiero))
+
+Entonces, para este subescenario, no solo aplica la Ley 1480; también resultan relevantes:
+
+- **Ley 45 de 1990**, al menos para la definición legal de intereses y límites máximos que la SIC cita en financiación. ([Superintendencia de Industria y Comercio](https://sedeelectronica.sic.gov.co/temas/proteccion-al-consumidor/derechos-y-deberes/financiacion-de-compras))
+- **Decreto 1074 de 2015**, capítulo sobre operaciones de crédito por medios tecnológicos y comercio electrónico, que la SIC cita en su Circular Externa 002 de 2023 y en sanciones a fintech. ([Superintendencia de Industria y Comercio](https://sedeelectronica.sic.gov.co/transparencia/normativa/circular-externa-no-02-del-10-de-octubre-de-2023))
+- **Ley 1480 de 2011**, especialmente información, publicidad engañosa, cláusulas abusivas y protección contractual. ([Superintendencia de Industria y Comercio](https://sedeelectronica.sic.gov.co/noticias/superindustria-imparte-instrucciones-para-las-operaciones-de-financiacion-traves-de-medios-tecnologicos-fintech-0))
+
+## 4. Escenario C: incumplimiento de servicio de telecomunicaciones
+
+Aquí **no rige solo la Ley 1480**. La SIC explica que el régimen jurídico de protección de los usuarios de servicios de comunicaciones está establecido **principalmente** en los **artículos 54 y siguientes de la Ley 1341 de 2009** y en la regulación de la **CRC**; agrega que el régimen general de protección al consumidor aplica **en lo no previsto** por ese régimen especial. ([Superintendencia de Industria y Comercio](https://sedeelectronica.sic.gov.co/temas/proteccion-al-consumidor/derechos-y-deberes/servicios-tic/Telecomunicaciones))
+
+En el plano procedimental, la SIC también ha dicho que el usuario primero debe acudir a su operador; si persiste la inconformidad, puede presentar **PQR** y, frente a la decisión del operador, interponer **reposición y en subsidio apelación**, caso en el cual el operador remite el expediente a la SIC para que resuelva la apelación. Además, indica que el usuario puede presentar la PQR por cualquiera de los medios de atención. ([Superintendencia de Industria y Comercio](https://sedeelectronica.sic.gov.co/noticias/esto-es-lo-que-debe-saber-para-hacer-reclamaciones-ante-operadores-de-telefonia-movil-o-fija-0))
+
+Por tanto, en telecomunicaciones el paquete normativo base es:
+
+- **Ley 1341 de 2009**, arts. 54 y ss., como régimen principal del usuario de comunicaciones. ([Superintendencia de Industria y Comercio](https://sedeelectronica.sic.gov.co/temas/proteccion-al-consumidor/derechos-y-deberes/servicios-tic/Telecomunicaciones))
+- **Regulación CRC**: la SIC en su portal cita la Resolución 3066 de 2011, pero el régimen ha sido compilado y modificado en la **Resolución CRC 5050 de 2016** y sus modificatorias, que siguen siendo la referencia regulatoria compilada en 2026. ([Superintendencia de Industria y Comercio](https://sedeelectronica.sic.gov.co/temas/proteccion-al-consumidor/derechos-y-deberes/servicios-tic/Telecomunicaciones))
+- **Ley 1480**, solo **supletoriamente** en lo no previsto por la regulación sectorial. ([Superintendencia de Industria y Comercio](https://sedeelectronica.sic.gov.co/temas/proteccion-al-consumidor/derechos-y-deberes/servicios-tic/Telecomunicaciones))
+
+## 5. ¿Qué ha dicho la SIC, en concreto?
+
+En términos sintéticos, la SIC ha sostenido estas tesis útiles para su árbol de decisión:
+
+1. **Garantía de bienes**: productores y expendedores responden solidariamente; la garantía legal protege calidad, idoneidad, seguridad y buen funcionamiento; si no hay término especial, para productos nuevos es de un año. ([Superintendencia de Industria y Comercio](https://sedeelectronica.sic.gov.co/temas/proteccion-al-consumidor/derechos-y-deberes/fallas-en-un-producto))
+2. **Acción del consumidor**: la protección al consumidor no se agota en garantías; también cubre publicidad engañosa, cláusulas abusivas, daños por ciertos servicios y otras infracciones a normas de consumo. ([Superintendencia de Industria y Comercio](https://sedeelectronica.sic.gov.co/temas/asuntos-jurisdiccionales/proteccion-del-consumidor))
+3. **Financiación y fintech**: la SIC es competente frente a financiación de compras y frente a crédito digital no vigilado por otra autoridad; allí ha exigido información clara, ha cuestionado cobros no informados, intereses por encima del tope, cláusulas abusivas y publicidad engañosa. ([Superintendencia de Industria y Comercio](https://sedeelectronica.sic.gov.co/temas/proteccion-al-consumidor/derechos-y-deberes/financiacion-de-compras))
+4. **Telecomunicaciones**: primero actúa el operador por vía de PQR; la SIC interviene, sobre todo, como autoridad de apelación dentro del régimen especial del usuario de comunicaciones. ([Superintendencia de Industria y Comercio](https://sedeelectronica.sic.gov.co/noticias/esto-es-lo-que-debe-saber-para-hacer-reclamaciones-ante-operadores-de-telefonia-movil-o-fija-0))
+
+## 6. Conclusión operativa para su caso/hackathon
+
+La respuesta correcta no es “solo Estatuto del Consumidor”, sino esta:
+
+- **Escenario A – producto defectuoso**: principalmente **Ley 1480**. ([Superintendencia de Industria y Comercio](https://sedeelectronica.sic.gov.co/temas/proteccion-al-consumidor/derechos-y-deberes/fallas-en-un-producto))
+- **Escenario B – cobro indebido financiero**:
+    - si es entidad vigilada: **Ley 1328 de 2009** y régimen de la Superfinanciera;
+    - si es financiación de compras o fintech no vigilada: **Ley 1480 + Ley 45 de 1990 + Decreto 1074 de 2015**, con competencia de la SIC en ese ámbito. ([Superfinanciera](https://www.superfinanciera.gov.co/publicaciones/61636/normativaproteccion-al-consumidor-financierosobre-el-regimen-especifico-de-proteccion-al-consumidor-financieroley-de-proteccion-al-consumidor-financiero-61636/?utm_source=chatgpt.com))
+- **Escenario C – telecomunicaciones**: **Ley 1341 de 2009 + regulación CRC**, y la **Ley 1480** solo de manera complementaria. ([Superintendencia de Industria y Comercio](https://sedeelectronica.sic.gov.co/temas/proteccion-al-consumidor/derechos-y-deberes/servicios-tic/Telecomunicaciones))
+
+Si quiere, el siguiente paso útil es convertir esto en una **matriz por escenario: norma aplicable, autoridad competente, trámite previo y salida del árbol de decisión**.

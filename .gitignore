@@ -1,0 +1,54 @@
+# Superpowers internal planning docs (not for public repo)
+docs/superpowers/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+frontend/dist/
+frontend/build/
+.npm/
+
+# Google Cloud credentials (service account keys)
+*-credentials.json
+*serviceAccountKey*.json
+firebase-adminsdk*.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# PDFs — generados localmente, no necesarios en Replit
+*.pdf
+
+# Logs
+*.log

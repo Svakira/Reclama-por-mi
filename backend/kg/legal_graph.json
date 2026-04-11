@@ -1,0 +1,230 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "last_updated": "2026-04-11",
+    "author": "Semillero LegalTech ICESI",
+    "description": "Knowledge Graph jurídico para pipeline JusticIA. COMPLETAR por compañero de Derecho — ver TAREAS-DERECHO.md"
+  },
+
+  "laws": [
+    {
+      "id": "LEY_1480_2011",
+      "name": "Ley 1480 de 2011 — Estatuto del Consumidor",
+      "jurisdiction": "Colombia",
+      "authority": "Congreso de la República",
+      "scenarios": ["A", "B", "C"],
+      "notes": "Ley principal. Para escenario C aplica solo supletoriamente."
+    },
+    {
+      "id": "LEY_1341_2009",
+      "name": "Ley 1341 de 2009 — Ley TIC",
+      "jurisdiction": "Colombia",
+      "authority": "Congreso de la República",
+      "scenarios": ["C"],
+      "notes": "Régimen principal usuario de comunicaciones, arts. 54 y ss."
+    },
+    {
+      "id": "LEY_1328_2009",
+      "name": "Ley 1328 de 2009 — Régimen de Protección al Consumidor Financiero",
+      "jurisdiction": "Colombia",
+      "authority": "Congreso de la República",
+      "scenarios": ["B_SUPERFINANCIERA"],
+      "notes": "Solo para entidades vigiladas por la Superfinanciera. Fuera del scope del demo."
+    },
+    {
+      "id": "LEY_45_1990",
+      "name": "Ley 45 de 1990",
+      "jurisdiction": "Colombia",
+      "authority": "Congreso de la República",
+      "scenarios": ["B"],
+      "notes": "Aplica en cobros indebidos de crédito no vigilado por Superfinanciera."
+    }
+  ],
+
+  "articles": [
+    {
+      "id": "ART_7_LEY_1480",
+      "law_id": "LEY_1480_2011",
+      "article_number": "7",
+      "title": "Garantía legal",
+      "text": "COMPLETAR — pegar texto literal del artículo 7 de la Ley 1480. Ver docs/Ley-1480-2011_Estatuto-del-Consumidor.pdf",
+      "scenarios": ["A"],
+      "tags": ["garantia_legal", "producto_defectuoso", "bien_nuevo"],
+      "claim_threshold": "El bien presenta defecto o falla dentro del plazo de garantía legal (1 año para bienes nuevos sin término especial)"
+    },
+    {
+      "id": "ART_10_LEY_1480",
+      "law_id": "LEY_1480_2011",
+      "article_number": "10",
+      "title": "Efectividad de la garantía",
+      "text": "COMPLETAR — pegar texto literal del artículo 10 de la Ley 1480.",
+      "scenarios": ["A"],
+      "tags": ["efectividad_garantia", "reparacion", "cambio", "devolucion"],
+      "claim_threshold": "El proveedor o productor se negó a hacer efectiva la garantía del bien"
+    },
+    {
+      "id": "ART_11_LEY_1480",
+      "law_id": "LEY_1480_2011",
+      "article_number": "11",
+      "title": "Término y condiciones de la garantía",
+      "text": "COMPLETAR — pegar texto literal del artículo 11 de la Ley 1480.",
+      "scenarios": ["A"],
+      "tags": ["plazo_garantia", "garantia_legal", "un_año"],
+      "claim_threshold": "Plazo de 1 año para bienes nuevos si no hay término especial pactado"
+    },
+    {
+      "id": "ART_16_LEY_1480",
+      "law_id": "LEY_1480_2011",
+      "article_number": "16",
+      "title": "Causales de exoneración de responsabilidad",
+      "text": "COMPLETAR — pegar texto literal del artículo 16 de la Ley 1480.",
+      "scenarios": ["A"],
+      "tags": ["exoneracion", "responsabilidad_productor", "carga_prueba"],
+      "claim_threshold": "El proveedor alega causal de exoneración. Carga de la prueba en el proveedor."
+    },
+    {
+      "id": "ART_23_LEY_1480",
+      "law_id": "LEY_1480_2011",
+      "article_number": "23",
+      "title": "Responsabilidad por información y publicidad engañosa",
+      "text": "COMPLETAR — pegar texto literal del artículo 23 de la Ley 1480.",
+      "scenarios": ["A", "B", "C"],
+      "tags": ["publicidad_enganosa", "informacion_enganosa", "responsabilidad"],
+      "claim_threshold": "Lo que le ofrecieron no coincide con lo que recibió o cobró"
+    },
+    {
+      "id": "ART_37_LEY_1480",
+      "law_id": "LEY_1480_2011",
+      "article_number": "37",
+      "title": "Cláusulas abusivas — ineficaces de pleno derecho",
+      "text": "COMPLETAR — pegar texto literal del artículo 37 de la Ley 1480.",
+      "scenarios": ["B"],
+      "tags": ["clausula_abusiva", "ineficacia", "contrato"],
+      "claim_threshold": "El contrato contiene cláusula que causó cobro indebido y genera desequilibrio en perjuicio del consumidor"
+    },
+    {
+      "id": "ART_43_LEY_1480",
+      "law_id": "LEY_1480_2011",
+      "article_number": "43",
+      "title": "Cláusulas prohibidas",
+      "text": "COMPLETAR — pegar texto literal del artículo 43 de la Ley 1480.",
+      "scenarios": ["B"],
+      "tags": ["clausula_abusiva", "clausula_prohibida"],
+      "claim_threshold": "La cláusula que originó el cobro está en la lista de cláusulas prohibidas"
+    },
+    {
+      "id": "ART_58_LEY_1480",
+      "law_id": "LEY_1480_2011",
+      "article_number": "58",
+      "title": "Acciones jurisdiccionales — Competencia SIC",
+      "text": "COMPLETAR — pegar texto literal del artículo 58 de la Ley 1480.",
+      "scenarios": ["A", "B", "C"],
+      "tags": ["accion_proteccion_consumidor", "competencia_sic", "jurisdiccion"],
+      "claim_threshold": "Fundamento procesal para radicar ante la SIC"
+    },
+    {
+      "id": "ART_54_LEY_1341",
+      "law_id": "LEY_1341_2009",
+      "article_number": "54",
+      "title": "Derechos de los usuarios de servicios de comunicaciones",
+      "text": "COMPLETAR — pegar texto literal del artículo 54 de la Ley 1341.",
+      "scenarios": ["C"],
+      "tags": ["usuario_comunicaciones", "derechos_usuario", "telecomunicaciones"],
+      "claim_threshold": "El operador incumplió las condiciones del servicio de telecomunicaciones contratado"
+    }
+  ],
+
+  "claim_templates": [
+    {
+      "id": "CLAIM_A_GARANTIA_REPARACION",
+      "scenario": "A",
+      "pretension_type": "garantia",
+      "remedy": "reparacion",
+      "template": "Que se haga efectiva la garantía legal del bien [PRODUCT_NAME] mediante su reparación, conforme al artículo 10 de la Ley 1480 de 2011.",
+      "articles_cited": ["ART_7_LEY_1480", "ART_10_LEY_1480"],
+      "monetary": false
+    },
+    {
+      "id": "CLAIM_A_GARANTIA_CAMBIO",
+      "scenario": "A",
+      "pretension_type": "garantia",
+      "remedy": "cambio",
+      "template": "Que se haga efectiva la garantía legal mediante la entrega de un bien nuevo de iguales o superiores condiciones al [PRODUCT_NAME], conforme al artículo 10 de la Ley 1480 de 2011.",
+      "articles_cited": ["ART_7_LEY_1480", "ART_10_LEY_1480"],
+      "monetary": false
+    },
+    {
+      "id": "CLAIM_A_GARANTIA_DEVOLUCION",
+      "scenario": "A",
+      "pretension_type": "garantia",
+      "remedy": "devolucion_dinero",
+      "template": "Que se devuelva el precio pagado de [AMOUNT] pesos por el bien [PRODUCT_NAME], dado que no cumple las condiciones de calidad e idoneidad establecidas en el artículo 7 de la Ley 1480 de 2011.",
+      "articles_cited": ["ART_7_LEY_1480", "ART_10_LEY_1480"],
+      "monetary": true,
+      "amount_placeholder": "[AMOUNT]"
+    },
+    {
+      "id": "CLAIM_B_DEVOLUCION_COBRO_INDEBIDO",
+      "scenario": "B",
+      "pretension_type": "cobro_indebido",
+      "remedy": "devolucion_dinero",
+      "template": "Que se restituya la suma de [AMOUNT] pesos cobrada indebidamente el [DATE], correspondiente a [CHARGE_DESCRIPTION], sin fundamento contractual válido, conforme a los artículos 23 y 37 de la Ley 1480 de 2011.",
+      "articles_cited": ["ART_23_LEY_1480", "ART_37_LEY_1480"],
+      "monetary": true,
+      "amount_placeholder": "[AMOUNT]"
+    },
+    {
+      "id": "CLAIM_C_TELECOMUNICACIONES_DEVOLUCION",
+      "scenario": "C",
+      "pretension_type": "incumplimiento_servicio",
+      "remedy": "devolucion_dinero",
+      "template": "Que se devuelva el valor proporcional al período de incumplimiento del servicio [SERVICE_TYPE] contratado con [OPERATOR_NAME], conforme al artículo 54 de la Ley 1341 de 2009.",
+      "articles_cited": ["ART_54_LEY_1341"],
+      "monetary": true,
+      "amount_placeholder": "[AMOUNT]"
+    },
+    {
+      "id": "CLAIM_C_TELECOMUNICACIONES_CUMPLIMIENTO",
+      "scenario": "C",
+      "pretension_type": "incumplimiento_servicio",
+      "remedy": "cumplimiento",
+      "template": "Que el operador [OPERATOR_NAME] cumpla las condiciones del servicio [SERVICE_TYPE] en los términos contratados, conforme al artículo 54 de la Ley 1341 de 2009.",
+      "articles_cited": ["ART_54_LEY_1341"],
+      "monetary": false
+    }
+  ],
+
+  "rejection_templates": [
+    {
+      "id": "REJECT_NO_CONSUMER_RELATION",
+      "reason_code": "no_relacion_consumo",
+      "title": "No se identifica relación de consumo bajo Ley 1480",
+      "explanation_for_rosa": "COMPLETAR — explicación en lenguaje simple para Rosa. Ver TAREAS-DERECHO.md",
+      "legal_basis": "Artículos 1 y 2, Ley 1480 de 2011 — definición de relación de consumo"
+    },
+    {
+      "id": "REJECT_SUPERFINANCIERA",
+      "reason_code": "competencia_superfinanciera",
+      "title": "El caso corresponde a la Superintendencia Financiera, no a la SIC",
+      "explanation_for_rosa": "Su banco o entidad financiera está vigilado por la Superintendencia Financiera de Colombia, no por la SIC. Para presentar su queja, ingrese a: https://www.superfinanciera.gov.co",
+      "legal_basis": "Ley 1328 de 2009 — régimen especial consumidor financiero",
+      "redirect_url": "https://www.superfinanciera.gov.co/jsp/loader.jsf?lServicio=PublicacionesPortal&lTipo=publicaciones&lFuncion=loadContenidoPublicacion&id=60968"
+    },
+    {
+      "id": "REJECT_REQUIRES_PQR",
+      "reason_code": "requires_pqr_first",
+      "title": "Debe presentar PQR ante el operador primero",
+      "explanation_for_rosa": "Para reclamos de telecomunicaciones, primero debe presentar una queja directamente con su operador (Claro, ETB, Tigo, etc.). Si el operador no le da la razón, entonces puede acudir a la SIC. Conserve el número de radicado de su PQR.",
+      "legal_basis": "Artículo 54 y ss. Ley 1341 de 2009 — régimen especial usuario de comunicaciones"
+    }
+  ],
+
+  "pqr_requirement": {
+    "scenario": "C",
+    "required": true,
+    "description": "Para telecomunicaciones, el usuario debe haber presentado PQR ante el operador antes de acudir a la SIC.",
+    "question_for_rosa": "¿Ya presentó una queja, petición o reclamo (PQR) directamente con su operador de telecomunicaciones? ¿Tiene el número de radicado?",
+    "legal_basis": ["ART_54_LEY_1341"],
+    "notes": "Arts. 54 y ss. Ley 1341/2009 y Resolución CRC 5050 de 2016. COMPLETAR texto por compañero de Derecho."
+  }
+}

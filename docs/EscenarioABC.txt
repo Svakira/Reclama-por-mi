@@ -1,0 +1,73 @@
+# Escenario A
+
+## 2. Escenario A: producto defectuoso comprado en tienda física
+
+Aquí **sí** el eje principal es la **Ley 1480**. La SIC ha dicho que productores y expendedores responden **solidaria y directamente** por la efectividad de la garantía, que la garantía legal está en el artículo 7, que en ausencia de término especial la garantía de productos nuevos es de **un año**, y que el consumidor debe acreditar la reclamación directa para acudir a la SIC o al juez. También ha precisado que el consumidor, en principio, debe demostrar el defecto, mientras el proveedor asume la carga de probar una causal de exoneración del artículo 16.
+
+Por tanto, en este escenario las normas principales son:
+
+- **Ley 1480 de 2011**, especialmente arts. **7, 10, 11, 16 y 58**. (esta ley ya está subida)
+- Como fundamento constitucional general de protección al consumidor, la propia SIC remite a la **Constitución** al explicar la garantía, aunque en la práctica el desarrollo operativo está en la Ley 1480.
+
+
+# Escenario B
+
+## 3. Escenario B: cobro indebido por servicio financiero
+
+Aquí hay que diferenciar, porque **no siempre la SIC es la autoridad principal**.
+
+### 3.1. Si se trata de una entidad vigilada por la Superintendencia Financiera
+
+No basta con la Ley 1480. Aplica el **régimen especial de consumidor financiero**, cuyo eje es la **Ley 1328 de 2009**. La Superintendencia Financiera la presenta como la norma integradora del régimen de protección al consumidor financiero, y el Defensor del Consumidor Financiero tiene funciones legales de conocer y resolver quejas de los consumidores financieros.
+
+En ese caso, las normas base son:
+
+- **Ley 1328 de 2009**.
+    
+    [ley-de-materia-financiera-de-seguros-y-del-mercado-de-valore.pdf](attachment:94e1ac53-1ee1-4fea-b80e-5032ca501431:ley-de-materia-financiera-de-seguros-y-del-mercado-de-valore.pdf)
+    
+- **Decreto 2555 de 2010**, en lo relativo a la Defensoría del Consumidor Financiero y al régimen operativo que la Superfinanciera compila como aplicable. (este es demasiado largo mejor no incorporar PDF ENVIO LINK:
+- [Decreto 2555 de 2010 - Gestor Normativo - Función Pública](https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=40032)
+
+### 3.2. Si se trata de financiación de compras o fintech no vigilada por otra autoridad
+
+Aquí sí puede entrar la SIC. La propia SIC ha dicho que su intervención en el ámbito financiero está **limitada** a personas que ofrecen operaciones de crédito mediante sistemas de financiación **no vigiladas por la Superfinanciera**. También ha señalado que, en financiación de compras, es competente cuando en una relación de consumo se adquiere un bien o servicio a plazos y se cobra directa o indirectamente un interés. En 2023 instruyó a fintech no vigiladas con apoyo en la **Ley 1480**, la **Ley 45 de 1990** y el **Decreto 1074 de 2015**, y ha sancionado por usura, información insuficiente, publicidad engañosa, protección contractual y comercio electrónico.
+
+Entonces, para este subescenario, no solo aplica la Ley 1480; también resultan relevantes:
+
+- **Ley 45 de 1990**, al menos para la definición legal de intereses y límites máximos que la SIC cita en financiación.
+
+[ley-45-de-1990-por-la-cual-se-expiden-normas-en-materia-de-i.pdf](attachment:ab8df47b-33d9-4a63-a51d-303f32aecc0b:ley-45-de-1990-por-la-cual-se-expiden-normas-en-materia-de-i.pdf)
+
+- **Decreto 1074 de 2015**, capítulo sobre operaciones de crédito por medios tecnológicos y comercio electrónico, que la SIC cita en su Circular Externa 002 de 2023 y en sanciones a fintech.
+
+(muy largo no me dejó subirlo: el link es este: https://www.bing.com/search?pglt=43&q=Decreto+1074+de+2015&cvid=7118efce6cd64d9ba4f97705636cfe95&gs_lcrp=EgRlZGdlKgYIABBFGDkyBggAEEUYOTIGCAEQABhAMgYIAhAAGEAyBggDEAAYQDIGCAQQABhAMgYIBRAAGEAyBggGEAAYQDIGCAcQRRg8MgYICBBFGDwyCAgJEOkHGPxV0gEIMTIyM2owajGoAgCwAgA&FORM=ANNAB1&PC=ASTS
+
+- **Ley 1480 de 2011**, especialmente información, publicidad engañosa, cláusulas abusivas y protección contractual.
+
+
+# ESCENARIO C
+
+## Escenario C: incumplimiento de servicio de telecomunicaciones
+
+Aquí **no rige solo la Ley 1480**. La SIC explica que el régimen jurídico de protección de los usuarios de servicios de comunicaciones está establecido **principalmente** en los **artículos 54 y siguientes de la Ley 1341 de 2009** y en la regulación de la **CRC**; agrega que el régimen general de protección al consumidor aplica **en lo no previsto** por ese régimen especial.
+
+En el plano procedimental, la SIC también ha dicho que el usuario primero debe acudir a su operador; si persiste la inconformidad, puede presentar **PQR** y, frente a la decisión del operador, interponer **reposición y en subsidio apelación**, caso en el cual el operador remite el expediente a la SIC para que resuelva la apelación. Además, indica que el usuario puede presentar la PQR por cualquiera de los medios de atención.
+
+Por tanto, en telecomunicaciones el paquete normativo base es:
+
+- **Ley 1341 de 2009**, arts. 54 y ss., como régimen principal del usuario de comunicaciones.
+
+[ley  1341 de 2009 ley-de-las-tecnologas-de-la-informacin-y-las-comunicaciones-.pdf](attachment:383103dc-1ec7-4fcf-83a1-eaf93b4cd906:ley-de-las-tecnologas-de-la-informacin-y-las-comunicaciones-.pdf)
+
+- **Regulación CRC**: la SIC en su portal cita la Resolución 3066 de 2011, pero el régimen ha sido compilado y modificado en la **Resolución CRC 5050 de 2016** y sus modificatorias, que siguen siendo la referencia regulatoria compilada en 2026.
+- **Ley 1480**, solo **supletoriamente** en lo no previsto por la regulación sectorial.
+
+## 5. ¿Qué ha dicho la SIC, en concreto?
+
+En términos sintéticos, la SIC ha sostenido estas tesis útiles para su árbol de decisión:
+
+1. **Garantía de bienes**: productores y expendedores responden solidariamente; la garantía legal protege calidad, idoneidad, seguridad y buen funcionamiento; si no hay término especial, para productos nuevos es de un año.
+2. **Acción del consumidor**: la protección al consumidor no se agota en garantías; también cubre publicidad engañosa, cláusulas abusivas, daños por ciertos servicios y otras infracciones a normas de consumo.
+3. **Financiación y fintech**: la SIC es competente frente a financiación de compras y frente a crédito digital no vigilado por otra autoridad; allí ha exigido información clara, ha cuestionado cobros no informados, intereses por encima del tope, cláusulas abusivas y publicidad engañosa.
+4. **Telecomunicaciones**: primero actúa el operador por vía de PQR; la SIC interviene, sobre todo, como autoridad de apelación dentro del régimen especial del usuario de comunicaciones.

@@ -1,0 +1,50 @@
+# información complementaria abogados
+
+## 1. Para sentencias y criterios en reclamaciones de consumo: **Relatoría de la SIC**
+
+La fuente principal para revisar **decisiones jurisdiccionales** de la SIC en acción de protección al consumidor es el **Buscador de Relatorías**. La propia SIC lo presenta como la herramienta para buscar relatorías de las decisiones jurisdiccionales proferidas por la entidad. Esa es la fuente más pertinente para sus escenarios de **producto defectuoso**, **cláusulas abusivas**, **publicidad engañosa** y, en general, controversias derivadas de relaciones de consumo.
+
+## 2. Para resoluciones, sanciones y actos administrativos: **Buscador de Actos Administrativos**
+
+Si lo que usted quiere ver no es una sentencia jurisdiccional sino una **resolución administrativa**, sanción, orden o acto expedido por la SIC, debe usar el **Buscador de Actos Administrativos**. La SIC lo ofrece precisamente para consultar documentos y decisiones públicas de carácter administrativo. Esto es especialmente útil en temas de **telecomunicaciones**, **PQR**, **vigilancia administrativa**, y también en sanciones por información engañosa, incumplimiento de deberes de información o infracciones sectoriales.
+
+## 3. Para seguimiento de un expediente o proceso concreto: **Consulta de Trámites SIC**
+
+Si usted ya tiene un **radicado** o quiere revisar actuaciones de un caso específico, la ruta adecuada es **Consulta de Trámites SIC**. Esa herramienta permite buscar por año, número de radicado, tipo y número de documento. No reemplaza la relatoría ni el buscador de actos, pero sirve para ubicar el estado o trazabilidad de un trámite determinado.
+
+## 4. Para telecomunicaciones: decisiones sobre recursos y régimen del usuario
+
+En **telecomunicaciones** hay un matiz importante: muchas controversias empiezan ante el operador, y la SIC interviene principalmente en sede de **apelación** dentro del régimen especial de usuarios de comunicaciones. La SIC explica que el recurso de apelación se presenta en subsidio del de reposición ante el proveedor, para que la Superintendencia decida de fondo. También detalla el flujo de PQR y recursos en sus guías para usuarios. Para buscar precedentes o resoluciones de este frente, conviene combinar el **Buscador de Actos Administrativos** con las páginas temáticas de telecomunicaciones de la SIC.
+
+## 5. Para encontrar ejemplos rápidos y resúmenes de decisiones: **Boletín Jurídico y publicaciones**
+
+Si quiere ubicar **casos modelo** sin empezar por una búsqueda compleja, el **Boletín Jurídico** y las publicaciones de la SIC son útiles porque resumen fallos y sanciones concretas. Allí aparecen, por ejemplo, decisiones sobre **garantía de productos** y sanciones o actuaciones en **telecomunicaciones**. Esto no sustituye la lectura de la providencia o del acto completo, pero sí ayuda a identificar radicados, líneas interpretativas y temas repetidos.
+
+## 6. Cómo mapear esas fuentes a sus tres escenarios
+
+Para **producto defectuoso comprado en tienda física**, la mejor fuente inicial es la **Relatoría SIC**, porque allí encontrará sentencias de acción de protección al consumidor sobre garantía y efectividad de la garantía. Como apoyo, puede usar el **Boletín Jurídico** para hallar fallos ejemplificativos más rápido.
+
+Para **cobro indebido por servicio financiero**, la búsqueda debe dividirse: si está dentro de una controversia de consumo que la SIC haya conocido, puede aparecer en **Relatoría**; si se trata de instrucciones, sanciones o actuaciones administrativas frente a fintech o financiación, es más útil el **Buscador de Actos Administrativos** y las publicaciones/noticias institucionales.
+
+Para **incumplimiento de telecomunicaciones**, lo más útil suele ser el **Buscador de Actos Administrativos** y las páginas temáticas de la SIC sobre usuarios de servicios de comunicaciones, porque allí se mueve gran parte de la práctica decisional sobre PQR, reposición y apelación.
+
+## 7. Ruta práctica de consulta
+
+Si su objetivo es construir el hackathon con base en material oficial, el orden más eficiente es este:
+
+1. **Relatoría SIC** para extraer criterios y estructura argumentativa de sentencias.
+2. **Buscador de Actos Administrativos** para resoluciones y decisiones administrativas.
+3. **Boletín Jurídico** para hallar casos ejemplo y luego rastrear la decisión completa.
+4. **Consulta de Trámites** cuando ya tenga radicado o expediente específico.
+
+## 8. Recomendación metodológica para su árbol de decisión
+
+Para el prototipo, lo más sólido es separar dos repositorios de precedentes:
+
+**(i)** “jurisdiccionales” = Relatoría;
+
+**(ii)** “administrativos/sancionatorios/sectoriales” = Actos Administrativos.
+
+Esa separación evita mezclar una **sentencia de protección al consumidor** con una **resolución administrativa**, que jurídicamente no cumplen la misma función.
+
+Si le sirve, en el siguiente paso puedo organizarle una **ruta exacta de búsqueda por palabras clave** para cada escenario, por ejemplo: garantía celular, cobro no autorizado fintech, PQR telecomunicaciones, cláusula abusiva, publicidad engañosa.

@@ -1,0 +1,12 @@
+run = "pip install -r backend/requirements.txt -q && python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8000"
+entrypoint = "backend/main.py"
+
+[nix]
+channel = "stable-23_11"
+
+[unitTest]
+language = "python3"
+
+[deployment]
+run = ["sh", "-c", "python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8000"]
+deploymentTarget = "static"
