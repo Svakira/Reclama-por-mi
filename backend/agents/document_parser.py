@@ -75,18 +75,31 @@ def _classify_image(file_bytes: bytes, filename: str) -> dict:
     """Use vision model to classify what kind of image this is.
     Returns: {"type": "evidence_photo"|"text_document"|"unknown", "description": "...", "details": {...}}
     """
-    prompt = """Analiza esta imagen y clasifícala. Responde SOLO con JSON válido, sin texto adicional.
+    prompt = f"""Analiza esta imagen y clasifícala. El archivo se llama: "{filename}".
+Responde SOLO con JSON válido, sin texto adicional.
 
-Si es una FOTO DE EVIDENCIA (foto de un producto dañado, pantalla rota, defecto visible, producto con problema, 
-screenshot de conversación de WhatsApp como prueba, foto de un aparato electrónico con problemas, etc.):
-{"type": "evidence_photo", "description": "descripción breve de lo que muestra la imagen", "product": "nombre del producto si se identifica", "defect": "descripción del defecto o problema visible"}
+TIPOS DE IMAGEN:
 
-Si es un DOCUMENTO DE TEXTO (factura, recibo, extracto bancario, contrato, carta, formulario, ticket de compra, 
-radicado de PQR, cualquier documento con texto para extraer):
-{"type": "text_document", "description": "tipo de documento que parece ser"}
+1. CAPTURA DE PANTALLA / SCREENSHOT de una aplicación, test de velocidad, gráfica, 
+   tabla de datos, números de ticket, conversación de chat, etc. — esto es evidencia digital:
+{{"type": "evidence_photo", "description": "descripción exacta de lo que muestra la pantalla", "product": "servicio o producto relacionado si se identifica", "defect": "qué problema evidencia esta captura"}}
 
-Si no puedes determinar qué es:
-{"type": "unknown", "description": "descripción de lo que se ve"}"""
+2. FOTO DE EVIDENCIA FÍSICA — producto dañado, pantalla rota, defecto visible:
+{{"type": "evidence_photo", "description": "descripción breve de lo que muestra", "product": "nombre del producto", "defect": "descripción del defecto o problema visible"}}
+
+3. DOCUMENTO DE TEXTO — factura, recibo, extracto bancario, contrato, carta, formulario, 
+   ticket de compra, radicado de PQR, cualquier documento con texto estructurado para extraer:
+{{"type": "text_document", "description": "tipo de documento que parece ser"}}
+
+4. Si no puedes determinar qué es:
+{{"type": "unknown", "description": "descripción de lo que se ve"}}
+
+IMPORTANTE: 
+- Un screenshot de un test de velocidad de internet (Fast.com, Speedtest, etc.) es evidence_photo, NO un documento de texto.
+- Un screenshot de números de ticket o códigos de radicado es evidence_photo.
+- Una gráfica o tabla de datos es evidence_photo.
+- Describe LO QUE REALMENTE VES en la imagen, no inventes defectos que no existen.
+- Usa el nombre del archivo como pista del contenido."""
 
     result = _vision_call(file_bytes, filename, prompt, max_tokens=512)
     if not result.strip():
@@ -141,6 +154,11 @@ def _extract_image_text(file_bytes: bytes, filename: str = "doc.jpg") -> str:
     return text if text.strip() else vision_text
 
 
+def _extract_image_text_groq_vision(file_bytes: bytes, filename: str = "doc.jpg") -> str:
+    """Backward-compatible wrapper used by legacy tests and integrations."""
+    return _extract_image_text(file_bytes, filename)
+
+
 def _extract_pdf_as_image(file_bytes: bytes) -> str:
     try:
         import fitz
@@ -166,25 +184,60 @@ def _score_extraction(raw_text: str, extracted_fields: dict) -> float:
     return round(0.6 * field_score + 0.4 * text_quality, 2)
 
 
+def _analyze_document(raw_text: str) -> dict:
+    """Stage 1 (fast model): Understand what the document is and what it contains."""
+    from backend.agents.groq_client import chat_complete_fast
+
+    prompt = (
+        "Analiza este texto de un documento colombiano y responde SOLO con JSON válido:\n"
+        '{"doc_type": "tipo (factura, contrato, recibo, extracto, garantía, PQR, otro)", '
+        '"contains": "resumen en 1 línea de qué datos tiene"}\n\n'
+        f"Texto:\n{raw_text[:1500]}"
+    )
+    try:
+        result = chat_complete_fast([{"role": "user", "content": prompt}])
+        result = re.sub(r"```json\s*|\s*```", "", result).strip()
+        parsed = json.loads(result)
+        print(
+            f"[AGENT][DocumentParser] analysis doc_type={parsed.get('doc_type')} "
+            f"contains={str(parsed.get('contains', ''))[:80]}"
+        )
+        return parsed
+    except Exception:
+        return {"doc_type": "documento", "contains": ""}
+
+
 def _parse_with_groq(raw_text: str, doc_type_hint: str) -> dict:
+    """Two-stage dynamic extraction: fast model analyzes → big model extracts."""
     from backend.agents.groq_client import chat_complete
-    prompt = f"""Extrae los campos del siguiente documento de tipo "{doc_type_hint}".
-Devuelve SOLO un JSON con estos campos (null si no aparece):
-- fecha: fecha del documento o compra
-- monto: valor monetario en pesos colombianos
-- nombre_consumidor: nombre de la persona
-- cedula: número de identificación
-- nombre_proveedor: nombre de la empresa o tienda
-- nit_proveedor: NIT de la empresa
-- producto_servicio: descripción del producto o servicio
-- numero_referencia: número de factura, contrato, extracto, radicado o similar
-- imei_serial: IMEI, serial o código identificador del producto
-- descripcion_cobro: descripción de cobro o cargo si aplica
 
-Texto del documento:
-{raw_text[:3000]}
+    # Stage 1: fast model understands the document
+    analysis = _analyze_document(raw_text)
+    doc_type = analysis.get("doc_type") or doc_type_hint
+    contains = analysis.get("contains", "")
 
-Responde SOLO con JSON válido, sin texto adicional."""
+    # Stage 2: big model extracts all relevant data
+    prompt = (
+        f'Este documento es de tipo "{doc_type}".'
+        f'{f" Contenido detectado: {contains}" if contains else ""}\n\n'
+        "Extrae TODOS los datos relevantes para una reclamación de consumidor "
+        "ante la SIC (Superintendencia de Industria y Comercio) colombiana.\n\n"
+        "Busca datos sobre:\n"
+        "- Consumidor/comprador: nombre completo, cédula/C.C., dirección, teléfono, correo\n"
+        "- Proveedor/empresa/vendedor: nombre o razón social, NIT, dirección, teléfono\n"
+        "- Producto o servicio: descripción, marca, modelo exacto, serial/IMEI\n"
+        "- Transacción: fecha, monto/valor total, forma de pago, lugar de compra, "
+        "número de factura o referencia\n"
+        "- Otros: garantía, descripción de cobro, condiciones especiales\n\n"
+        "REGLAS:\n"
+        "- Extrae los datos EXACTAMENTE como aparecen en el documento.\n"
+        "- Para fechas, escribe la fecha completa (ej: '14 de octubre de 2024').\n"
+        "- Para montos, incluye el símbolo $ si aparece.\n"
+        "- Si un dato no aparece en el documento, NO lo incluyas en el JSON.\n"
+        "- Usa nombres descriptivos en español para cada campo.\n\n"
+        "Responde SOLO con JSON válido, sin texto adicional.\n\n"
+        f"Texto del documento:\n{raw_text[:3000]}"
+    )
 
     try:
         result = chat_complete([{"role": "user", "content": prompt}])
@@ -192,6 +245,33 @@ Responde SOLO con JSON válido, sin texto adicional."""
         return json.loads(result)
     except Exception:
         return {}
+
+
+def _extract_product_model(raw_text: str) -> Optional[str]:
+    text = raw_text or ""
+    patterns = [
+        r"(?i)\b(samsung\s+galaxy\s+[a-z0-9\-]+(?:\s*\([^\)]+\))?)",
+        r"(?i)\b(iphone\s+[a-z0-9\-]+(?:\s*\([^\)]+\))?)",
+        r"(?i)\b(motorola\s+[a-z0-9\-]+(?:\s*\([^\)]+\))?)",
+        r"(?i)\b(xiaomi\s+[a-z0-9\-]+(?:\s*\([^\)]+\))?)",
+        r"(?i)\b(redmi\s+[a-z0-9\-]+(?:\s*\([^\)]+\))?)",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text)
+        if match:
+            return " ".join(match.group(1).split())
+    return None
+
+
+def _enrich_fields_from_raw_text(raw_text: str, fields: dict) -> dict:
+    enriched = dict(fields or {})
+    product_model = _extract_product_model(raw_text)
+    if product_model:
+        enriched.setdefault("marca_modelo", product_model)
+        current_product = str(enriched.get("producto_servicio") or "").strip()
+        if not current_product or current_product.lower() in {"telefono", "teléfono", "celular", "teléfono móvil", "telefono movil"}:
+            enriched["producto_servicio"] = product_model
+    return enriched
 
 
 class DocumentParser:
@@ -273,6 +353,7 @@ class DocumentParser:
             }
 
         fields = _parse_with_groq(raw_text, doc_type_hint)
+        fields = _enrich_fields_from_raw_text(raw_text, fields)
         confidence = _score_extraction(raw_text, fields)
         print(
             f"[AGENT][DocumentParser] parse.done filename={filename} "

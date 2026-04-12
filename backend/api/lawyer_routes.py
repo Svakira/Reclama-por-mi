@@ -4,7 +4,7 @@ Lawyer-only routes implementing the 4 hard gates:
 1. LawyerApprovalGate       — POST /cases/{id}/approve (in cases_routes)
 2. Illegibility gate         — POST /lawyer/illegibility/{case_id}
 3. PENDING_CLAIM_DECISION    — POST /lawyer/claim-decision/{case_id}
-4. Filing options gate       — POST /lawyer/filing-option/{case_id}
+4. Delivery options gate     — POST /lawyer/filing-option/{case_id}
 """
 from datetime import datetime, timezone
 from typing import Annotated
@@ -135,7 +135,7 @@ async def lawyer_claim_decision(
 
 
 # ─────────────────────────────────────────────────────────────────────
-# Hard Gate 4: Filing options (Stage 10)
+# Hard Gate 4: Delivery options (Stage 10)
 # ─────────────────────────────────────────────────────────────────────
 
 @router.post("/filing-option/{case_id}")
@@ -145,9 +145,9 @@ async def set_filing_option(
     token: LawyerDep,
 ):
     """
-    After lawyer approves, Rosa chooses filing option:
-    1 — Clinic files on her behalf (requires rosa_document_consent=True)
-    2 — Rosa files herself (PDF + guide delivered)
+    After lawyer approves, Rosa chooses delivery option:
+    1 — WhatsApp delivery with attachments/resources
+    2 — Manual delivery (PDF + guide delivered)
     3 — Discard → generates rejection document
     """
     case = await get_document("cases", case_id)
@@ -171,11 +171,11 @@ async def set_filing_option(
 
     if body.option == 1:
         updates["rosa_document_consent"] = True
-        updates["status"] = "FILING_OPTION_1_PENDING"
-        result_message = "Clínica presentará la reclamación en nombre de Rosa. Requiere firma de poder."
+        updates["status"] = "DELIVERY_OPTION_1_PENDING"
+        result_message = "Se programó entrega por WhatsApp de documentos y recursos para Rosa."
     elif body.option == 2:
-        updates["status"] = "FILING_OPTION_2_PDF_READY"
-        result_message = "PDF de reclamación generado. Rosa presentará directamente ante la SIC."
+        updates["status"] = "DELIVERY_OPTION_2_PDF_READY"
+        result_message = "PDF de reclamación listo para entrega manual a Rosa."
     else:  # option 3
         updates["status"] = "DISCARDED_BY_ROSA"
         result_message = "Rosa decidió no presentar. Se generará documento de cierre."

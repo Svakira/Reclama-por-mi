@@ -10,6 +10,7 @@ Stage 0–1: IntakeInterviewer
 import json
 import os
 import uuid
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -78,7 +79,7 @@ def _safe_text(text: str) -> str:
     return flat if len(flat) <= 180 else f"{flat[:180]}... (len={len(flat)})"
 
 
-SYSTEM_PROMPT_TEMPLATE = """Eres JusticIA, un asistente colombiano amable que SOLO recopila información.
+SYSTEM_PROMPT_TEMPLATE = """Eres el asistente de Reclama por mi, una plataforma colombiana que ayuda a consumidores a preparar reclamaciones ante la SIC.
 Tu único trabajo es hacer preguntas para entender qué pasó y recoger los datos necesarios.
 
 PROHIBIDO ABSOLUTAMENTE:
@@ -89,13 +90,23 @@ PROHIBIDO ABSOLUTAMENTE:
 - NO hagas predicciones sobre resultados ("deberías poder...", "la tienda debe...")
 - SOLO haz preguntas para entender qué pasó y recopilar datos
 
-Tu trabajo tiene 2 fases:
-FASE 1 - ENTENDER: Haz preguntas simples para entender qué le pasó al usuario. Solo escucha y pregunta.
-FASE 2 - RECOPILAR: Recoge datos del consumidor, proveedor y documentos disponibles.
-
 Habla en español colombiano informal y cercano. Sé empático pero enfocado. Haz UNA pregunta a la vez.
-Ejemplo correcto: "Entiendo, qué frustrante. ¿Cuándo compraste el producto y cuánto pagaste?"
-Ejemplo INCORRECTO: "Parece que tienes un producto defectuoso y podrías pedir garantía."
+
+PRIORIDAD DE PREGUNTAS (sigue este orden, salta lo que el usuario ya respondió):
+1. Escucha el problema. Si el usuario ya lo contó, NO pidas más detalles del producto ni del defecto.
+2. Pregunta qué quiere lograr: ¿quiere que le devuelvan la plata, que le cambien el producto, que lo reparen, u otra cosa?
+3. Pregunta si tiene la factura o comprobante de compra y si puede compartirlo.
+4. Pregunta si ya fue a reclamar directamente al proveedor y qué le dijeron.
+5. Recoge datos personales: nombre completo, cédula.
+6. Solo si falta algo crítico para entender el caso, pregunta detalles adicionales.
+
+ESTILO OBLIGATORIO DE RESPUESTA:
+- Nunca reinicies la conversación ni saludes de nuevo si ya hubo intercambio.
+- Haz una sola pregunta concreta y breve (maximo 20 palabras).
+- NUNCA repitas una frase que ya dijiste en la misma respuesta.
+- Si el usuario ya dijo qué producto tiene, NO preguntes marca ni modelo — ya lo sabes.
+- Si el usuario ya explicó el problema en detalle, avanza a lo que FALTA para armar la reclamación.
+- Evita completamente preguntas innecesarias sobre detalles que no cambian la reclamación.
 
 Internamente necesitas clasificar en:
 A) Producto defectuoso en tienda física
@@ -109,9 +120,9 @@ indica amablemente que debe ir a la Superfinanciera, no a la SIC.
 
 REGLAS IMPORTANTES:
 1. Primero entiende el problema antes de clasificar
-2. Pregunta por documentos que tenga disponibles (facturas, fotos, etc.) SIN decir para qué sirven legalmente
-3. Pregunta datos del consumidor: nombre completo, cédula, dirección, teléfono, email
-4. Pregunta datos del proveedor: nombre del negocio/empresa
+2. Cuando el usuario ya contó su historia, NO pidas detalles del producto — pregunta qué resultado quiere y si tiene documentos
+3. Pregunta datos del consumidor: nombre completo, cédula
+4. Pregunta datos del proveedor solo si no los mencionó
 5. Para telecomunicaciones, pregunta si ya presentó queja formal al operador
 6. NO pidas todos los datos de una vez — ve preguntando de a poco
 7. Cuando tengas suficiente información, incluye el bloque <CLASSIFICATION> en tu respuesta
@@ -153,9 +164,9 @@ def _build_system_prompt() -> str:
 
 
 GREETING = (
-    "Hola, soy JusticIA. Estoy aquí para ayudarte a preparar una reclamación "
+    "Hola, soy Reclama por mi. Estoy aqui para ayudarte a preparar una reclamacion "
     "ante la SIC si tienes un problema como consumidor. Es completamente gratis.\n\n"
-    "Cuéntame, ¿qué te pasó? Puedes explicármelo con tus propias palabras."
+    "Cuentame, \u00bfque te paso? Puedes explicarmelo con tus propias palabras."
 )
 
 
@@ -171,8 +182,62 @@ def parse_classification(text: str) -> Optional[dict]:
 
 
 def clean_reply(text: str) -> str:
-    import re
     return re.sub(r"\s*<CLASSIFICATION>.*?</CLASSIFICATION>", "", text, flags=re.DOTALL).strip()
+
+
+def _pick_first_question(text: str) -> Optional[str]:
+    match = re.search(r"([^?]{4,}\?)", text)
+    if not match:
+        return None
+    return " ".join(match.group(1).split())
+
+
+def _deduplicate_sentences(text: str) -> str:
+    """Remove repeated sentences within the same reply."""
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    seen: set[str] = set()
+    unique: list[str] = []
+    for s in sentences:
+        key = re.sub(r'\s+', ' ', s.strip().lower())
+        if key and key not in seen:
+            seen.add(key)
+            unique.append(s)
+    return ' '.join(unique)
+
+
+def _normalize_reply_for_user(text: str) -> str:
+    cleaned = " ".join((text or "").split())
+    # Strip greetings and resets that don't belong mid-conversation
+    cleaned = re.sub(r"(?i)^\s*!?hola!?\s*", "", cleaned)
+    cleaned = re.sub(r"(?i)me\s+alegra\s+(verte|que\s+hayas\s+venido)\.?\s*", "", cleaned)
+    cleaned = re.sub(r"(?i)[¿?]?\s*qu[eé]\s+te\s+trae\s+hoy\s*\??\.?\s*", "", cleaned)
+    cleaned = re.sub(r"(?i)empecemos\s+desde\s+cero\.??\s*", "", cleaned)
+    cleaned = re.sub(r"(?i)quiero\s+entender\s+que\s+te\s+paso\s+exactamente\.??\s*", "", cleaned)
+    # Strip old bot name if LLM still uses it
+    cleaned = re.sub(r"(?i)\bjustic[ií]a\b", "Reclama por mi", cleaned)
+    # Remove duplicate sentences
+    cleaned = _deduplicate_sentences(cleaned.strip())
+    cleaned = cleaned.strip()
+
+    question = _pick_first_question(cleaned)
+    if not question:
+        return "Entiendo lo que me cuentas. ¿Tienes factura, fotos o algun soporte? Si puedes, adjuntalo aqui."
+
+    if re.search(r"(?i)ultimo\s+dia|cu[aá]ndo\s+es\s+posible", question):
+        return "Entiendo lo que me cuentas. ¿Tienes la factura o comprobante de compra? Si la tienes, adjuntala aqui."
+
+    lead = ""
+    lead_match = re.search(r"(?i)(entiendo[^.?!]*[.?!])", cleaned)
+    if lead_match:
+        lead = " ".join(lead_match.group(1).split())
+
+    # Avoid re-duplicating: if question already contains the lead, skip prepending
+    if lead and lead.lower().rstrip(".!? ") in question.lower():
+        normalized = question
+    else:
+        normalized = f"{lead} {question}".strip()
+    normalized = re.sub(r"\s+", " ", normalized)
+    return normalized
 
 
 class IntakeInterviewer:
@@ -190,11 +255,11 @@ class IntakeInterviewer:
         print(f"[AGENT][IntakeInterviewer][session={self.session_id}] user.message={_safe_text(user_message)}")
         self.history.append({"role": "user", "content": user_message})
 
-        raw_reply = chat_complete(self.history)
+        raw_reply = chat_complete(self.history, temperature=0.2, max_tokens=280)
         self.history.append({"role": "assistant", "content": raw_reply})
 
         classification = parse_classification(raw_reply)
-        clean = clean_reply(raw_reply)
+        clean = _normalize_reply_for_user(clean_reply(raw_reply))
 
         if classification and classification.get("minimum_vars_collected"):
             self.classification = classification

@@ -49,6 +49,20 @@ export default function Login() {
       textAlign: 'center',
       marginBottom: 28,
     },
+    logoImgWrap: {
+      width: 64,
+      height: 64,
+      borderRadius: 14,
+      overflow: 'hidden',
+      margin: '0 auto 12px',
+      border: `1px solid ${colors.border}`,
+    },
+    logoImg: {
+      width: '100%',
+      height: '100%',
+      objectFit: 'cover',
+      display: 'block',
+    },
     logoText: {
       fontSize: 26,
       fontWeight: 700,
@@ -101,7 +115,10 @@ export default function Login() {
     <div style={s.page}>
       <div style={s.card}>
         <div style={s.logoWrap}>
-          <div style={s.logoText}>⚖️ JusticIA</div>
+          <div style={s.logoImgWrap}>
+            <img src="/logo-icon.png" alt="RECLAMA POR MI" style={s.logoImg} />
+          </div>
+          <div style={s.logoText}>RECLAMA POR MI</div>
           <div style={s.logoSub}>Panel del Abogado — Clínica Jurídica ICESI</div>
         </div>
         <form onSubmit={handleLogin}>

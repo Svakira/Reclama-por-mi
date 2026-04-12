@@ -24,7 +24,8 @@ const STATUS_LABEL: Record<string, string> = {
   PENDING_REVIEW: 'Pendiente',
   LAWYER_REVIEWING: 'En revisión',
   APPROVED: 'Aprobado',
-  SUBMITTED_TO_SIC: 'Enviado SIC',
+  DELIVERED_TO_ROSA: 'Entregado a Rosa',
+  SUBMITTED_TO_SIC: 'Entregado a Rosa',
   PENDING_CLAIM_DECISION: 'Decisión requerida',
   DOCS_REQUESTED: 'Docs. solicitados',
   CLOSED: 'Cerrado',
@@ -40,7 +41,7 @@ export default function MyCases() {
     api.get('/cases').then(r => {
       const allCases = r.data || []
       const mine = allCases.filter((c: Case) =>
-        c.status === 'LAWYER_REVIEWING' || c.status === 'APPROVED' || c.status === 'SUBMITTED_TO_SIC'
+        c.status === 'LAWYER_REVIEWING' || c.status === 'APPROVED' || c.status === 'DELIVERED_TO_ROSA' || c.status === 'SUBMITTED_TO_SIC'
       )
       setCases(mine)
     }).finally(() => setLoading(false))
@@ -52,7 +53,7 @@ export default function MyCases() {
   return (
     <AdminLayout>
       <div style={{ padding: 28 }}>
-        <h2 style={{ margin: '0 0 20px', fontSize: 22, fontWeight: 700, color: colors.text, fontFamily: typography.heading }}>Mis casos</h2>
+        <h2 style={{ margin: '0 0 20px', fontSize: 22, fontWeight: 700, color: colors.text, fontFamily: typography.display }}>Mis casos</h2>
         <p style={{ color: colors.textMuted, fontSize: 13, marginBottom: 20 }}>Casos asignados a {lawyerName || 'ti'} o en los que has intervenido.</p>
         {loading ? (
           <p style={{ color: colors.textMuted }}>Cargando...</p>

@@ -27,7 +27,7 @@ Responde SOLO con JSON válido:
       "severity": "warning"|"critical",
       "narrative_value": "lo que dijo Rosa",
       "document_value": "lo que dice el documento",
-      "message": "descripción clara de la discrepancia"
+      "message": "descripción clara que SIEMPRE incluya ambos valores, p. ej.: 'Según el consumidor la garantía es de 2 años, pero el documento indica 1 año.'"
     }
   ],
   "cross_validation_passed": true|false,
@@ -35,7 +35,8 @@ Responde SOLO con JSON válido:
 }
 
 Si no hay discrepancias relevantes, devuelve discrepancies: [] y cross_validation_passed: true.
-No inventes discrepancias. Solo reporta las que realmente existan."""
+No inventes discrepancias. Solo reporta las que realmente existan.
+IMPORTANTE: En el campo "message" SIEMPRE incluye el valor según el consumidor Y el valor según el documento para que el abogado pueda comparar rápidamente."""
 
 
 def cross_validate(narrative: str, document_fields: dict) -> dict:

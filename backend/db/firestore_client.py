@@ -163,6 +163,18 @@ def seed_demo_case() -> None:
                 "message": "Rosa dice 'dos meses' pero factura indica oct 2025 (~5 meses a la fecha).",
             }
         ],
+        "validation_result": {
+            "valid": True,
+            "passed": 13,
+            "total": 13,
+            "checks": [
+                {"field": "consumer_name", "passed": True, "message": "Campo encontrado"},
+                {"field": "consumer_cedula", "passed": True, "message": "Campo encontrado"},
+                {"field": "provider_name", "passed": True, "message": "Campo encontrado"},
+            ],
+            "warnings": [],
+            "critical_failures": [],
+        },
         "legal_classification": {
             "scenario": "A",
             "applicable_articles": ["ART_7_LEY_1480", "ART_10_LEY_1480", "ART_11_LEY_1480", "ART_58_LEY_1480"],

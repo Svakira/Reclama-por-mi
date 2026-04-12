@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import api from '../api/client'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
@@ -9,12 +9,23 @@ interface Message {
   text: string
 }
 
+interface PendingAttachment {
+  id: string
+  file: File
+}
+
 const NAV_LINKS = [
-  { label: 'Inicio', href: '#top' },
-  { label: 'Cómo funciona', href: '#steps' },
-  { label: 'Mis casos', href: '/app/status' },
-  { label: 'Nosotros', href: '#benefits' },
+  { label: 'Inicio', href: '/app#top' },
+  { label: 'Como funciona', href: '/app#steps' },
+  { label: 'Nosotros', href: '/app#benefits' },
+  { label: 'Estado de caso', href: '/app/status' },
 ]
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
 
 export default function ChatView() {
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -24,12 +35,29 @@ export default function ChatView() {
   const [stage, setStage] = useState('INIT')
   const [caseId, setCaseId] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [isProcessingFinal, setIsProcessingFinal] = useState(false)
+  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([])
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    return window.innerWidth <= 980
+  })
+
   const fileRef = useRef<HTMLInputElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const chatRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { startSession() }, [])
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
+
+  useEffect(() => {
+    function onResize() {
+      const mobile = window.innerWidth <= 980
+      setIsMobile(mobile)
+      if (!mobile) setSidebarOpen(false)
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   async function startSession() {
     try {
@@ -38,241 +66,249 @@ export default function ChatView() {
       setStage(res.data.stage)
       setMessages([{ role: 'assistant', text: res.data.agent_reply }])
     } catch {
-      setMessages([{ role: 'assistant', text: 'Hola, soy JusticIA. ¿En qué te puedo ayudar hoy?' }])
+      setMessages([{ role: 'assistant', text: 'Hola, soy Reclama por mi. En que te puedo ayudar hoy?' }])
     }
   }
 
-  async function sendMessage() {
-    if (!input.trim() || loading) return
-    const text = input.trim()
-    setInput('')
-    setMessages((m) => [...m, { role: 'user', text }])
-    setLoading(true)
-    try {
-      const res = await api.post('/pipeline/message', { session_id: sessionId, message: text })
-      setMessages((m) => [...m, { role: 'assistant', text: res.data.agent_reply }])
-      setStage(res.data.stage)
-      if (res.data.stage === 'COMPLETE' && res.data.case_id) {
-        setCaseId(res.data.case_id)
-      }
-    } catch {
-      setMessages((m) => [...m, { role: 'assistant', text: 'Hubo un error. Por favor intenta de nuevo.' }])
-    }
-    setLoading(false)
-  }
+  async function uploadSingleFile(file: File) {
+    if (!sessionId) return
 
-  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file || !sessionId) return
-    setUploading(true)
-    setMessages((m) => [...m, { role: 'user', text: `Subiendo: ${file.name}` }])
     const form = new FormData()
     form.append('session_id', sessionId)
     form.append('file', file)
     form.append('doc_type', 'auto')
+
     try {
-      const res = await api.post('/pipeline/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } })
+      const res = await api.post('/pipeline/upload', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+
       if (res.data.blocked) {
-        setMessages((m) => [...m, { role: 'assistant', text: res.data.message || 'No pude leer bien ese documento. Intenta subir una foto m\u00e1s clara.' }])
+        setMessages((m) => [
+          ...m,
+          {
+            role: 'assistant',
+            text: res.data.message || 'No pude leer bien ese documento. Intenta subir una foto mas clara.',
+          },
+        ])
       } else {
         setStage(res.data.stage || 'DOCS_NEEDED')
         setMessages((m) => [...m, { role: 'assistant', text: res.data.message }])
       }
     } catch {
-      setMessages((m) => [...m, { role: 'assistant', text: 'Error al subir el documento. Por favor intenta de nuevo.' }])
+      setMessages((m) => [
+        ...m,
+        { role: 'assistant', text: `Error al subir ${file.name}. Puedes volver a intentarlo.` },
+      ])
     }
-    setUploading(false)
+  }
+
+  function queueFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = Array.from(e.target.files || [])
+    if (selected.length === 0) return
+
+    const next = selected.map((file) => ({ id: `${file.name}-${file.size}-${Math.random()}`, file }))
+    setPendingAttachments((prev) => [...prev, ...next])
+
     if (fileRef.current) fileRef.current.value = ''
   }
 
-  async function finalizePipeline() {
-    if (!sessionId) return
+  function removeQueuedFile(id: string) {
+    setPendingAttachments((prev) => prev.filter((item) => item.id !== id))
+  }
+
+  async function sendComposite() {
+    if (loading || uploading) return
+
+    const text = input.trim()
+    const hasFiles = pendingAttachments.length > 0
+    if (!text && !hasFiles) return
+
+    const fileNames = pendingAttachments.map((item) => item.file.name)
+    const userSummary = [
+      text,
+      hasFiles ? `Adjuntos: ${fileNames.join(', ')}` : '',
+    ].filter(Boolean).join('\n\n')
+
+    setMessages((m) => [...m, { role: 'user', text: userSummary }])
+    setInput('')
     setLoading(true)
-    setMessages((m) => [...m, { role: 'assistant', text: 'Procesando tu reclamaci\u00f3n... Esto puede tomar unos segundos.' }])
+
+    if (hasFiles) {
+      setUploading(true)
+      setMessages((m) => [...m, { role: 'assistant', text: `Recibi ${pendingAttachments.length} archivo(s). Voy a analizarlos ahora.` }])
+      for (const item of pendingAttachments) {
+        // Upload each attachment in order so backend stage/messages stay consistent.
+        // eslint-disable-next-line no-await-in-loop
+        await uploadSingleFile(item.file)
+      }
+      setPendingAttachments([])
+      setUploading(false)
+    }
+
+    if (text) {
+      try {
+        const res = await api.post('/pipeline/message', { session_id: sessionId, message: text })
+        setMessages((m) => [...m, { role: 'assistant', text: res.data.agent_reply }])
+        setStage(res.data.stage)
+        if (res.data.stage === 'COMPLETE' && res.data.case_id) {
+          setCaseId(res.data.case_id)
+        }
+      } catch {
+        setMessages((m) => [
+          ...m,
+          { role: 'assistant', text: 'Hubo un error enviando tu mensaje. Por favor intenta de nuevo.' },
+        ])
+      }
+    }
+
+    setLoading(false)
+  }
+
+  async function finalizePipeline() {
+    if (!sessionId || loading) return
+    setLoading(true)
+    setIsProcessingFinal(true)
+    setMessages((m) => [
+      ...m,
+      { role: 'assistant', text: 'Estamos revisando tu caso.' },
+    ])
+
     try {
       const res = await api.post('/pipeline/finalize', { session_id: sessionId })
       setCaseId(res.data.case_id)
       setStage(res.data.stage || 'WHATSAPP_OPTIN')
-      setMessages((m) => [...m, { role: 'assistant', text: res.data.message || res.data.simple_explanation || `Tu caso fue registrado: ${res.data.case_id}` }])
+      setMessages((m) => [
+        ...m,
+        {
+          role: 'assistant',
+          text: res.data.message || res.data.simple_explanation || `Tu caso fue registrado: ${res.data.case_id}`,
+        },
+      ])
     } catch (err: any) {
       const detail = err?.response?.data?.detail || 'Error al procesar el caso. Por favor intenta de nuevo.'
       setMessages((m) => [...m, { role: 'assistant', text: detail }])
     }
+
+    setIsProcessingFinal(false)
     setLoading(false)
   }
 
-  function scrollToChat() {
-    chatRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
-  const isMobile = typeof window !== 'undefined' ? window.innerWidth <= 1024 : false
+  const placeholder = useMemo(() => {
+    if (stage === 'DOCS_NEEDED') return 'Escribe algo como: aqui te mando la factura y foto del celular.'
+    if (stage === 'WHATSAPP_OPTIN') return 'Escribe tu numero de WhatsApp o "no"...'
+    return 'Escribe tu mensaje...'
+  }, [stage])
 
   const s: Record<string, React.CSSProperties> = {
-    page: { minHeight: '100vh', background: colors.surface, color: colors.text },
-    container: { maxWidth: 1400, margin: '0 auto', padding: '0 2rem' },
-    hero: {
-      padding: '4rem 2rem',
-      background: colors.surface,
-      display: 'grid',
-      gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-      gap: '4rem',
-      alignItems: 'center',
-    },
-    sectionLabel: {
-      fontSize: 12,
-      fontWeight: 700,
-      textTransform: 'uppercase',
-      letterSpacing: 1,
-      color: colors.accent,
-      marginBottom: 16,
-      display: 'block',
-    },
-    heroTitle: {
-      fontFamily: typography.display,
-      fontSize: 'clamp(2.2rem, 6vw, 3.5rem)',
-      fontWeight: 400,
-      lineHeight: 1.1,
-      marginBottom: 20,
+    page: {
+      minHeight: '100vh',
+      background: 'linear-gradient(180deg, #F7F6F4 0%, #FDFDFC 45%, #FFFFFF 100%)',
       color: colors.text,
+      fontFamily: typography.body,
+      display: 'flex',
+      flexDirection: 'column',
     },
-    heroText: {
-      fontSize: 16,
-      color: colors.neutral800,
-      lineHeight: 1.8,
-      marginBottom: 24,
-      maxWidth: 620,
+    workspace: {
+      maxWidth: 1240,
+      margin: '0 auto',
+      padding: isMobile ? '1rem' : '1.25rem',
+      display: 'grid',
+      gridTemplateColumns: isMobile ? '1fr' : '320px minmax(0, 1fr)',
+      gap: 18,
+      alignItems: 'start',
     },
-    heroBtns: { display: 'flex', gap: 12, flexWrap: 'wrap' },
-    btnPrimary: {
-      background: colors.primary,
-      color: '#fff',
-      padding: '12px 28px',
-      borderRadius: 20,
-      fontWeight: 600,
-      border: 'none',
-      cursor: 'pointer',
-      fontSize: 14,
-    },
-    btnSecondary: {
+    sidebar: {
+      border: `1px solid ${colors.neutral100}`,
+      borderRadius: 16,
       background: '#fff',
-      color: colors.neutral800,
-      padding: '12px 28px',
-      borderRadius: 20,
-      fontWeight: 600,
-      border: `1px solid ${colors.neutral100}`,
-      cursor: 'pointer',
-      fontSize: 14,
-    },
-    featureBox: {
-      background: colors.neutral50,
-      border: `1px solid ${colors.neutral100}`,
-      borderRadius: 16,
-      padding: '2rem',
-    },
-    featureBoxTitle: {
-      margin: '0 0 1rem 0',
-      fontSize: 20,
-      fontWeight: 700,
-      color: colors.text,
-    },
-    featureRow: { display: 'flex', gap: 12, marginBottom: 14, alignItems: 'flex-start' },
-    featureDot: {
-      width: 20,
-      height: 20,
-      borderRadius: '50%',
-      background: colors.primary,
-      color: '#fff',
-      fontWeight: 700,
-      fontSize: 12,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexShrink: 0,
-      marginTop: 2,
-    },
-    featureText: { fontSize: 14, color: colors.neutral800, lineHeight: 1.6 },
-    sectionWrap: { padding: '4rem 0' },
-    displayTitle: {
-      fontFamily: typography.display,
-      fontSize: 'clamp(2rem, 5vw, 2.5rem)',
-      fontWeight: 400,
-      marginBottom: 40,
-      color: colors.text,
-    },
-    stepsGrid: {
-      display: 'grid',
-      gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)',
-      gap: '2rem',
-    },
-    stepCard: { textAlign: 'left' },
-    stepNum: {
-      width: 48,
-      height: 48,
-      borderRadius: 8,
-      border: `1px solid ${colors.neutral100}`,
-      background: colors.neutral100,
-      color: colors.primary,
-      fontWeight: 700,
-      fontSize: 18,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: 16,
-    },
-    stepTitle: { fontSize: 16, fontWeight: 600, marginBottom: 10 },
-    stepText: { fontSize: 14, color: colors.textMuted, lineHeight: 1.6 },
-    featuresSection: {
-      borderTop: `1px solid ${colors.neutral100}`,
-      marginTop: 24,
-    },
-    benefitsGrid: {
-      display: 'grid',
-      gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
-      gap: '2.2rem',
-    },
-    benefitTitle: { fontSize: 16, fontWeight: 600, marginBottom: 8 },
-    benefitText: { fontSize: 14, color: colors.textMuted, lineHeight: 1.6 },
-    chatSection: {
-      borderTop: `1px solid ${colors.neutral100}`,
-      marginTop: 24,
-      paddingTop: '4rem',
-    },
-    chatTitle: {
-      fontFamily: typography.display,
-      fontSize: 'clamp(2rem, 5vw, 2.5rem)',
-      fontWeight: 400,
-      marginBottom: 8,
-    },
-    chatContainer: {
-      marginTop: 24,
-      background: colors.neutral50,
-      border: `1px solid ${colors.neutral100}`,
-      borderRadius: 16,
-      padding: '2rem',
       boxShadow: shadows.card,
+      padding: '1rem',
+      position: isMobile ? 'fixed' : 'sticky',
+      top: isMobile ? 76 : 84,
+      left: isMobile ? 12 : 'auto',
+      width: isMobile ? '82vw' : 'auto',
+      zIndex: isMobile ? 80 : 'auto',
+      transform: isMobile ? (sidebarOpen ? 'translateX(0)' : 'translateX(-120%)') : 'none',
+      transition: 'transform 180ms ease-out',
     },
-    chatHeader: {
+    overlay: {
+      position: 'fixed',
+      inset: 0,
+      background: 'rgba(15,20,25,0.35)',
+      zIndex: 70,
+      display: isMobile && sidebarOpen ? 'block' : 'none',
+    },
+    sideTitle: { margin: 0, fontFamily: typography.display, fontSize: 26, lineHeight: 1.1 },
+    sideSubtitle: { margin: '8px 0 0', fontSize: 13, color: colors.textMuted, lineHeight: 1.6 },
+    infoCard: {
+      marginTop: 14,
+      borderRadius: 12,
+      border: `1px solid ${colors.neutral100}`,
+      background: colors.neutral50,
+      padding: '0.75rem 0.8rem',
+    },
+    infoTitle: { margin: 0, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5, color: colors.accent },
+    infoText: { margin: '6px 0 0', fontSize: 13, color: colors.neutral800, lineHeight: 1.5 },
+    infoList: { margin: '8px 0 0 0', paddingLeft: 18, fontSize: 13, color: colors.neutral800, lineHeight: 1.6 },
+    chatColumn: {
+      width: '100%',
+      maxWidth: 780,
+      justifySelf: 'center',
+    },
+    chatWrap: {
+      width: '100%',
+      maxWidth: 780,
+      justifySelf: 'center',
+      border: `1px solid ${colors.neutral100}`,
+      borderRadius: 16,
+      background: '#fff',
+      boxShadow: shadows.card,
+      overflow: 'hidden',
+    },
+    chatHead: {
       background: colors.primary,
       color: '#fff',
-      padding: '0.875rem 1.25rem',
-      borderRadius: 8,
-      marginBottom: '1rem',
-      fontWeight: 600,
+      padding: '0.9rem 1rem',
       fontSize: 13,
+      fontWeight: 600,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    chatHeadLeft: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+    },
+    drawerBtn: {
+      width: 28,
+      height: 28,
+      borderRadius: 8,
+      border: '1px solid rgba(255,255,255,0.35)',
+      background: 'transparent',
+      color: '#fff',
+      cursor: 'pointer',
+      display: isMobile ? 'inline-flex' : 'none',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: 14,
+      lineHeight: 1,
     },
     chatMessages: {
-      minHeight: 280,
-      maxHeight: 420,
+      minHeight: isMobile ? 330 : 420,
+      maxHeight: isMobile ? 460 : 560,
       overflowY: 'auto',
       display: 'flex',
       flexDirection: 'column',
       gap: 10,
-      marginBottom: 16,
+      padding: '1rem',
+      background: '#FDFCF9',
     },
     bubbleAssistant: {
       background: '#fff',
-      padding: '1rem 1.1rem',
-      borderRadius: 8,
+      padding: '0.9rem 1rem',
+      borderRadius: 10,
       borderLeft: `3px solid ${colors.accent}`,
       fontSize: 14,
       lineHeight: 1.6,
@@ -285,21 +321,82 @@ export default function ChatView() {
       background: colors.primary,
       color: '#fff',
       padding: '0.85rem 1rem',
-      borderRadius: 8,
+      borderRadius: 10,
       fontSize: 14,
-      lineHeight: 1.5,
+      lineHeight: 1.55,
       maxWidth: '90%',
       alignSelf: 'flex-end',
       whiteSpace: 'pre-wrap',
     },
+    caseBox: {
+      background: '#E8F3FF',
+      border: `1px solid ${colors.accent}55`,
+      borderRadius: 8,
+      padding: '10px 12px',
+      color: colors.primary,
+      fontSize: 13,
+      lineHeight: 1.5,
+    },
+    loadingRow: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+    },
+    loadingSpinner: {
+      width: 14,
+      height: 14,
+      borderRadius: '50%',
+      border: `2px solid ${colors.neutral200}`,
+      borderTopColor: colors.primary,
+      animation: 'rpm-spin 0.9s linear infinite',
+      flexShrink: 0,
+    },
+    inputArea: { borderTop: `1px solid ${colors.neutral100}`, padding: '0.85rem' },
+    previewWrap: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginBottom: pendingAttachments.length > 0 ? 10 : 0,
+    },
+    previewItem: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      border: `1px solid ${colors.neutral200}`,
+      background: colors.neutral50,
+      borderRadius: 999,
+      padding: '6px 10px',
+      maxWidth: '100%',
+    },
+    previewName: {
+      fontSize: 12,
+      color: colors.neutral800,
+      maxWidth: isMobile ? 150 : 210,
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
+    },
+    previewSize: { fontSize: 11, color: colors.textMuted },
+    removeFileBtn: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      border: 'none',
+      background: '#EDEAE5',
+      color: colors.text,
+      cursor: 'pointer',
+      fontWeight: 700,
+      lineHeight: 1,
+      padding: 0,
+    },
     chatInputGroup: {
       display: 'grid',
       gridTemplateColumns: isMobile ? '1fr' : '1fr auto',
-      gap: 12,
+      gap: 10,
     },
     chatInputShell: {
       border: `1px solid ${colors.neutral100}`,
-      borderRadius: 10,
+      borderRadius: 12,
       background: '#fff',
       display: 'flex',
       alignItems: 'center',
@@ -307,9 +404,9 @@ export default function ChatView() {
       padding: '0 8px',
     },
     attachBtn: {
-      width: 30,
-      height: 30,
-      borderRadius: 15,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
       border: `1px solid ${colors.neutral200}`,
       background: colors.neutral50,
       color: colors.textMuted,
@@ -317,6 +414,7 @@ export default function ChatView() {
       alignItems: 'center',
       justifyContent: 'center',
       cursor: 'pointer',
+      flexShrink: 0,
     },
     chatInput: {
       flex: 1,
@@ -328,11 +426,11 @@ export default function ChatView() {
       padding: '12px 6px',
       color: colors.text,
     },
-    actionsRight: { display: 'flex', gap: 8, alignItems: 'center', justifySelf: 'end' },
-    iconBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: 8,
+    actionsRight: { display: 'flex', gap: 8, alignItems: 'center', justifySelf: isMobile ? 'stretch' : 'end' },
+    voiceBtn: {
+      width: 42,
+      height: 42,
+      borderRadius: 10,
       border: `1px solid ${colors.neutral100}`,
       background: '#fff',
       color: colors.neutral800,
@@ -340,137 +438,111 @@ export default function ChatView() {
       alignItems: 'center',
       justifyContent: 'center',
       cursor: 'pointer',
+      flexShrink: 0,
     },
     sendBtn: {
       background: colors.primary,
       color: '#fff',
       border: 'none',
-      borderRadius: 8,
-      padding: '12px 24px',
+      borderRadius: 10,
+      padding: '12px 22px',
       fontSize: 14,
       fontWeight: 600,
       cursor: 'pointer',
+      width: isMobile ? '100%' : 'auto',
     },
-    caseBox: {
-      background: '#E8F3FF',
-      border: `1px solid ${colors.accent}55`,
-      borderRadius: 8,
-      padding: '12px 16px',
-      color: colors.primary,
-      fontSize: 14,
-      lineHeight: 1.6,
-    },
-    ctaSection: {
-      marginTop: 32,
-      borderRadius: 16,
-      background: colors.primary,
+    processBtn: {
+      background: colors.success,
       color: '#fff',
-      padding: '4rem 2rem',
-    },
-    ctaTitle: {
-      fontFamily: typography.display,
-      fontSize: 'clamp(2rem, 5vw, 2.5rem)',
-      fontWeight: 400,
-      marginBottom: 12,
-    },
-    ctaText: { fontSize: 16, lineHeight: 1.6, opacity: 0.95, marginBottom: 20, maxWidth: 780 },
-    ctaBtn: {
       border: 'none',
-      borderRadius: 20,
-      background: '#fff',
-      color: colors.primary,
-      padding: '12px 28px',
-      fontSize: 14,
+      borderRadius: 10,
+      padding: '10px 14px',
+      fontSize: 13,
       fontWeight: 600,
       cursor: 'pointer',
+      marginBottom: 10,
+      width: '100%',
+    },
+    backBtnRow: {
+      width: '100%',
+      marginBottom: 10,
+    },
+    backBtn: {
+      border: `1px solid ${colors.neutral200}`,
+      borderRadius: 10,
+      background: '#fff',
+      color: colors.neutral800,
+      padding: '8px 12px',
+      fontSize: 12,
+      fontWeight: 600,
+      textDecoration: 'none',
+      display: 'inline-block',
     },
   }
 
   return (
-    <div style={s.page} id="top">
-      <Navbar links={NAV_LINKS} />
+    <div style={s.page}>
+      <Navbar links={NAV_LINKS} contactLabel="Ayuda" />
 
-      <section style={s.hero}>
-        <div>
-          <span style={s.sectionLabel}>Defiende tus derechos</span>
-          <h1 style={s.heroTitle}>Tu reclamación merece ser escuchada.</h1>
-          <p style={s.heroText}>
-            Si tienes un problema con un producto o servicio, nosotros te ayudamos. Presentamos tu reclamación ante la SIC de forma gratuita y profesional, con todo el respaldo legal que necesitas.
+      <div style={s.overlay} onClick={() => setSidebarOpen(false)} />
+
+      <main style={s.workspace}>
+        <aside style={s.sidebar}>
+          <h2 style={s.sideTitle}>Como usar este chat</h2>
+          <p style={s.sideSubtitle}>
+            Este asistente organiza tu caso, revisa documentos y te guia para construir una reclamacion completa.
           </p>
-          <div style={s.heroBtns}>
-            <button style={s.btnPrimary} onClick={scrollToChat}>Iniciar mi caso</button>
-            <button style={s.btnSecondary}>Ir a contacto</button>
-          </div>
-        </div>
 
-        <div style={s.featureBox}>
-          <h3 style={s.featureBoxTitle}>¿Qué hacemos por ti?</h3>
-          {[
-            'Revisión legal experta de tu caso',
-            'Documentos preparados profesionalmente',
-            'Presentación ante la SIC incluida',
-            'Seguimiento completo del caso',
-            'Servicio 100% gratuito',
-          ].map((t) => (
-            <div style={s.featureRow} key={t}>
-              <div style={s.featureDot}>✓</div>
-              <div style={s.featureText}>{t}</div>
+          <div style={s.infoCard}>
+            <h3 style={s.infoTitle}>Que hace RECLAMA POR MI</h3>
+            <p style={s.infoText}>Te ayuda a estructurar hechos, subir evidencias y preparar un borrador formal para revision legal.</p>
+          </div>
+
+          <div style={s.infoCard}>
+            <h3 style={s.infoTitle}>Como interactuar</h3>
+            <ol style={s.infoList}>
+              <li>Escribe tu caso en lenguaje simple.</li>
+              <li>Adjunta varios archivos y, si quieres, envia texto en el mismo mensaje.</li>
+              <li>Cuando el chat pida mas soporte, usa "Procesar mi reclamacion" al terminar.</li>
+            </ol>
+          </div>
+
+          <div style={s.infoCard}>
+            <h3 style={s.infoTitle}>Tip util</h3>
+            <p style={s.infoText}>Ejemplo: "Aqui te mando la factura y foto del celular. La falla empezo hace 2 semanas".</p>
+          </div>
+        </aside>
+
+        <section style={s.chatColumn}>
+          <div style={s.backBtnRow}>
+            <a href="/app" style={s.backBtn}>Volver</a>
+          </div>
+
+          <div style={s.chatWrap}>
+            <div style={s.chatHead}>
+              <span style={s.chatHeadLeft}>
+                <button style={s.drawerBtn} onClick={() => setSidebarOpen(true)} aria-label="Abrir panel de ayuda">
+                  ☰
+                </button>
+                <span>Conversacion activa</span>
+              </span>
+              <span>{uploading ? 'Subiendo archivos...' : loading ? 'Procesando...' : 'Listo'}</span>
             </div>
-          ))}
-        </div>
-      </section>
 
-      <div style={s.container}>
-        <section style={s.sectionWrap} id="steps">
-          <span style={s.sectionLabel}>Proceso simple</span>
-          <h2 style={s.displayTitle}>Cuatro pasos para resolver tu problema</h2>
-          <div style={s.stepsGrid}>
-            {[
-              ['Cuéntanos tu caso', 'Describe qué pasó con tu compra o servicio. Nuestro asistente te guía con preguntas claras.'],
-              ['Sube evidencia', 'Comparte fotos, facturas, conversaciones y cualquier documento que respalde tu reclamo.'],
-              ['Revisión legal', 'Nuestro equipo revisa tu caso, valida la reclamación y prepara los documentos necesarios.'],
-              ['Presentamos ante SIC', 'Enviamos tu reclamación formalmente a la Superintendencia de Industria y Comercio.'],
-            ].map((step, idx) => (
-              <div style={s.stepCard} key={step[0]}>
-                <div style={s.stepNum}>{idx + 1}</div>
-                <h3 style={s.stepTitle}>{step[0]}</h3>
-                <p style={s.stepText}>{step[1]}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section style={{ ...s.sectionWrap, ...s.featuresSection }} id="benefits">
-          <span style={s.sectionLabel}>Ventajas</span>
-          <h2 style={s.displayTitle}>Por qué elegir JusticIA</h2>
-          <div style={s.benefitsGrid}>
-            {[
-              ['Completamente seguro', 'Tus datos están protegidos con estándares robustos de seguridad.'],
-              ['Gratis de verdad', 'No hay costos ocultos ni tarifas por transacción.'],
-              ['Rápido y simple', 'Completa tu reclamación en minutos con guía paso a paso.'],
-              ['Respaldo legal', 'Abogados expertos revisan cada caso antes de presentar.'],
-              ['Casos validados', 'Alto porcentaje de casos validados con documentación sólida.'],
-              ['Panel de control', 'Monitorea tu caso y recibe actualizaciones en cada etapa.'],
-            ].map((item) => (
-              <div key={item[0]}>
-                <h3 style={s.benefitTitle}>{item[0]}</h3>
-                <p style={s.benefitText}>{item[1]}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section style={s.chatSection} id="chat" ref={chatRef}>
-          <span style={s.sectionLabel}>Cuéntanos qué pasó</span>
-          <h2 style={s.chatTitle}>Nuestro asistente te guiará paso a paso</h2>
-
-          <div style={s.chatContainer}>
-            <div style={s.chatHeader}>JusticIA — Asistente de Reclamaciones</div>
             <div style={s.chatMessages}>
               {messages.map((m, i) => (
                 <div key={i} style={m.role === 'assistant' ? s.bubbleAssistant : s.bubbleUser}>{m.text}</div>
               ))}
-              {loading && <div style={s.bubbleAssistant}>Escribiendo...</div>}
+
+              {(loading || uploading || isProcessingFinal) && (
+                <div style={s.bubbleAssistant}>
+                  <span style={s.loadingRow}>
+                    <span style={s.loadingSpinner} aria-hidden="true" />
+                    <span>Estamos revisando tu caso...</span>
+                  </span>
+                </div>
+              )}
+
               {caseId && stage === 'COMPLETE' && (
                 <div style={s.caseBox}>
                   Caso registrado: <strong>{caseId}</strong>
@@ -480,71 +552,80 @@ export default function ChatView() {
             </div>
 
             {stage !== 'COMPLETE' && (
-              <div style={s.chatInputGroup}>
+              <div style={s.inputArea}>
                 {stage === 'DOCS_NEEDED' && (
-                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', width: '100%' }}>
-                    <button
-                      style={{ ...s.sendBtn, flex: 1, padding: '0.6rem 1rem', fontSize: '0.85rem', background: '#2e7d32' }}
-                      onClick={finalizePipeline}
-                      disabled={loading}
-                    >
-                      Procesar mi reclamaci&oacute;n
-                    </button>
-                  </div>
+                  <button style={s.processBtn} onClick={finalizePipeline} disabled={loading || uploading}>
+                    Procesar mi reclamacion
+                  </button>
                 )}
+
                 <input
                   ref={fileRef}
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png"
+                  multiple
                   style={{ display: 'none' }}
-                  onChange={handleFileUpload}
+                  onChange={queueFiles}
                 />
 
-                <div style={s.chatInputShell}>
-                  {(stage === 'DOCS_NEEDED' || stage === 'INTAKE') && (
-                    <button
-                      style={s.attachBtn}
-                      onClick={() => fileRef.current?.click()}
-                      disabled={uploading}
-                      title="Adjuntar documento"
-                      aria-label="Adjuntar documento"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.2-9.19a4 4 0 115.66 5.66l-9.2 9.2a2 2 0 11-2.83-2.83l8.49-8.48" /></svg>
-                    </button>
-                  )}
-                  <input
-                    style={s.chatInput}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder={
-                      stage === 'DOCS_NEEDED' ? 'Sube m\u00e1s documentos o escribe "listo"...'
-                      : stage === 'WHATSAPP_OPTIN' ? 'Escribe tu n\u00famero de WhatsApp o "no"...'
-                      : 'Escribe tu mensaje...'
-                    }
-                    onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                    disabled={loading}
-                  />
+                <div style={s.previewWrap}>
+                  {pendingAttachments.map((item) => (
+                    <div key={item.id} style={s.previewItem}>
+                      <div style={s.previewName}>{item.file.name}</div>
+                      <div style={s.previewSize}>{formatSize(item.file.size)}</div>
+                      <button
+                        style={s.removeFileBtn}
+                        onClick={() => removeQueuedFile(item.id)}
+                        aria-label={`Eliminar ${item.file.name}`}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
                 </div>
 
-                <div style={s.actionsRight}>
-                  <button style={s.iconBtn} title="Grabar audio" aria-label="Grabar audio" disabled>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10a7 7 0 0014 0" /><path d="M12 19v3" /><path d="M8 22h8" /></svg>
-                  </button>
-                  <button style={s.sendBtn} onClick={sendMessage} disabled={loading || !input.trim()}>Enviar</button>
+                <div style={s.chatInputGroup}>
+                  <div style={s.chatInputShell}>
+                    {(stage === 'DOCS_NEEDED' || stage === 'INTAKE') && (
+                      <button
+                        style={s.attachBtn}
+                        onClick={() => fileRef.current?.click()}
+                        disabled={uploading || loading}
+                        title="Adjuntar varios documentos"
+                        aria-label="Adjuntar varios documentos"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.2-9.19a4 4 0 115.66 5.66l-9.2 9.2a2 2 0 11-2.83-2.83l8.49-8.48" /></svg>
+                      </button>
+                    )}
+
+                    <input
+                      style={s.chatInput}
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      placeholder={placeholder}
+                      onKeyDown={(e) => e.key === 'Enter' && sendComposite()}
+                      disabled={loading || uploading}
+                    />
+                  </div>
+
+                  <div style={s.actionsRight}>
+                    <button style={s.voiceBtn} title="Grabar audio" aria-label="Grabar audio" disabled>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10a7 7 0 0014 0" /><path d="M12 19v3" /><path d="M8 22h8" /></svg>
+                    </button>
+                    <button
+                      style={s.sendBtn}
+                      onClick={sendComposite}
+                      disabled={loading || uploading || (!input.trim() && pendingAttachments.length === 0)}
+                    >
+                      Enviar
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
           </div>
         </section>
-
-        <section style={s.ctaSection}>
-          <h2 style={s.ctaTitle}>¿Necesitas resolver un reclamo?</h2>
-          <p style={s.ctaText}>
-            No dejes que una mala experiencia quede sin respuesta. Te ayudamos a hacer valer tus derechos como consumidor.
-          </p>
-          <button style={s.ctaBtn} onClick={scrollToChat}>Comenzar ahora</button>
-        </section>
-      </div>
+      </main>
 
       <Footer />
     </div>

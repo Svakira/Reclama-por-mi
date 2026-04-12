@@ -12,16 +12,16 @@ from typing import Optional
 # SIC required field markers in the draft text
 REQUIRED_FIELD_PATTERNS = [
     ("consumer_name", r"(?i)(nombre|consumidor|señor[a]?)\s*:?\s*\w+"),
-    ("consumer_cedula", r"(?i)(c\.?c\.?|cédula|identificación)\s*:?\s*[\d.]+"),
-    ("consumer_address", r"(?i)(dirección|domicilio|calle|carrera|avenida)"),
-    ("provider_name", r"(?i)(proveedor|empresa|razón social|establecimiento)\s*:?\s*\w+"),
-    ("product_description", r"(?i)(producto|bien|servicio|celular|contrato|plan)"),
-    ("purchase_date", r"(?i)(fecha|adquirió|compró|contrat[ó|o])\s*:?\s*\d"),
-    ("amount_paid", r"(?i)(precio|valor|monto|pagó|pago)\s*:?\s*\$?\s*[\d.,]+"),
-    ("facts_description", r"(?i)(hechos|hecho\s+\d|ocurrió|presenta)"),
-    ("primary_pretension", r"(?i)(pretensión|pretension|solicita|ordene)"),
-    ("legal_grounds", r"(?i)(ley\s+1480|ley\s+1341|artículo\s+\d|fundamento)"),
-    ("evidence_list", r"(?i)(prueba|factura|contrato|extracto|fotografía|foto|chat)"),
+    ("consumer_cedula", r"(?i)(c\.?c\.?|cédula|cedula|identificaci[oó]n)\s*[^\d]{0,20}[\d.]+"),
+    ("consumer_address", r"(?i)(dirección|direccion|domicilio|calle|carrera|avenida)"),
+    ("provider_name", r"(?i)(proveedor|empresa|razón social|razon social|establecimiento)\s*:?\s*\w+"),
+    ("product_description", r"(?i)(producto|bien|servicio|celular|contrato|plan|samsung|iphone|motorola|xiaomi)"),
+    ("purchase_date", r"(?i)(fecha|adquiri[oó]|compr[oó]|contrat[oó]|octubre|noviembre|diciembre|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|\d{1,2}\s+de\s+\w+\s+de\s+\d{4})"),
+    ("amount_paid", r"(?i)(precio|valor|monto|pag[oó]|\$\s*[\d.,]+|[\d.,]+\s*(?:pesos|cop))"),
+    ("facts_description", r"(?i)(hechos|hecho\s+\d|ocurrió|ocurrio|presenta|defecto|incumplimiento|inconformidad)"),
+    ("primary_pretension", r"(?i)(pretensión|pretension|solicita|ordene|garantía|garantia)"),
+    ("legal_grounds", r"(?i)(ley\s+1480|ley\s+1341|artículo\s+\d|articulo\s+\d|fundamento)"),
+    ("evidence_list", r"(?i)(prueba|factura|contrato|extracto|fotografía|fotografia|foto|chat|documento)"),
 ]
 
 # Valid articles that can be cited (must match KG)

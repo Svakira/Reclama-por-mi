@@ -45,7 +45,7 @@ export default function Footer() {
     <footer style={s.footer}>
       <div style={s.grid}>
         <div>
-          <h4 style={s.title}>JusticIA</h4>
+          <h4 style={s.title}>RECLAMA POR MI</h4>
           <a href="#" style={s.item}>Sobre nosotros</a>
           <a href="#" style={s.item}>Blog</a>
           <a href="#" style={s.item}>Preguntas frecuentes</a>
@@ -58,7 +58,7 @@ export default function Footer() {
         </div>
         <div>
           <h4 style={s.title}>Contacto</h4>
-          <a href="#" style={s.item}>info@justicia.co</a>
+          <a href="#" style={s.item}>info@reclamapormi.co</a>
           <a href="#" style={s.item}>+57 (2) 555-1234</a>
           <a href="#" style={s.item}>Chat en vivo</a>
         </div>
@@ -70,7 +70,7 @@ export default function Footer() {
         </div>
       </div>
       <div style={s.bottom}>
-        © 2026 Clínica Jurídica ICESI · Superintendencia de Industria y Comercio · Ley 1480 de 2011
+        © 2026 RECLAMA POR MI · Reclamaciones legales automaticas · Ley 1480 de 2011
       </div>
     </footer>
   )

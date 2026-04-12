@@ -37,7 +37,7 @@ export default function ClosedCases() {
   return (
     <AdminLayout>
       <div style={{ padding: 28 }}>
-        <h2 style={{ margin: '0 0 20px', fontSize: 22, fontWeight: 700, color: colors.text, fontFamily: typography.heading }}>Casos cerrados / rechazados</h2>
+        <h2 style={{ margin: '0 0 20px', fontSize: 22, fontWeight: 700, color: colors.text, fontFamily: typography.display }}>Casos cerrados / rechazados</h2>
         {loading ? (
           <p style={{ color: colors.textMuted }}>Cargando...</p>
         ) : cases.length === 0 ? (

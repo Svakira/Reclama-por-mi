@@ -15,7 +15,8 @@ const STATUS_CONFIG: Record<string, { bg: string; color: string; label: string }
   PENDING_REVIEW: { bg: 'rgba(184,134,11,0.15)', color: colors.warning, label: 'Pendiente revisión' },
   LAWYER_REVIEWING: { bg: 'rgba(26,58,92,0.15)', color: colors.primary, label: 'En revisión' },
   APPROVED: { bg: 'rgba(74,103,65,0.15)', color: colors.success, label: 'Aprobado' },
-  SUBMITTED_TO_SIC: { bg: 'rgba(74,103,65,0.15)', color: colors.success, label: 'Enviado SIC' },
+  DELIVERED_TO_ROSA: { bg: 'rgba(74,103,65,0.15)', color: colors.success, label: 'Entregado a Rosa' },
+  SUBMITTED_TO_SIC: { bg: 'rgba(74,103,65,0.15)', color: colors.success, label: 'Entregado a Rosa' },
   PENDING_CLAIM_DECISION: { bg: 'rgba(184,134,11,0.15)', color: colors.warning, label: 'Decisión requerida' },
   ILLEGIBLE_DOCUMENT_BLOCKED: { bg: 'rgba(167,62,62,0.15)', color: colors.danger, label: 'Doc. ilegible' },
   DOCS_REQUESTED: { bg: 'rgba(26,58,92,0.15)', color: colors.primary, label: 'Docs. solicitados' },
@@ -36,7 +37,6 @@ interface Case {
 export default function Queue() {
   const [cases, setCases] = useState<Case[]>([])
   const [loading, setLoading] = useState(true)
-  const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [sortBy, setSortBy] = useState('date')
   const navigate = useNavigate()
@@ -59,14 +59,12 @@ export default function Queue() {
     ['PENDING_REVIEW', 'PENDING_CLAIM_DECISION', 'LAWYER_REVIEWING'].includes(c.status)
   ).length
   const reviewingCount = cases.filter((c) => c.status === 'LAWYER_REVIEWING').length
-  const approvedCount = cases.filter((c) => ['APPROVED', 'SUBMITTED_TO_SIC'].includes(c.status)).length
+  const approvedCount = cases.filter((c) => ['APPROVED', 'DELIVERED_TO_ROSA', 'SUBMITTED_TO_SIC'].includes(c.status)).length
   const approvalRate = cases.length > 0 ? Math.round((approvedCount / cases.length) * 100) : 0
 
   const filteredCases = cases.filter((c) => {
-    const q = query.trim().toLowerCase()
     if (statusFilter !== 'all' && c.status !== statusFilter) return false
-    if (!q) return true
-    return [c.case_id, c.consumer_name, c.status, c.case_type].join(' ').toLowerCase().includes(q)
+    return true
   })
 
   const sortedCases = [...filteredCases].sort((a, b) => {

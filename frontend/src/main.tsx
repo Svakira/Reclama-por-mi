@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import ChatView from './app/ChatView'
+import LandingView from './app/LandingView'
 import StatusView from './app/StatusView'
 import Login from './admin/Login'
 import Queue from './admin/Queue'
@@ -19,7 +20,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
-        <Route path="/app" element={<ChatView />} />
+        <Route path="/app" element={<LandingView />} />
+        <Route path="/app/chat" element={<ChatView />} />
         <Route path="/app/status/:caseId" element={<StatusView />} />
 
         <Route path="/admin/login" element={<Login />} />

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '../api/client'
 import AdminLayout from './AdminLayout'
@@ -13,6 +13,28 @@ interface ArticleAnalysis {
   confidence_by_article: number
   relevant_excerpt: string
   reasoning_summary: string
+}
+
+interface ValidationCheck {
+  field: string
+  passed: boolean
+  message: string
+}
+
+interface ValidationResult {
+  valid: boolean
+  passed: number
+  total: number
+  checks: ValidationCheck[]
+  warnings: string[]
+  critical_failures: string[]
+}
+
+interface PipelineAuditEvent {
+  timestamp: string
+  stage: string
+  event: string
+  payload?: Record<string, unknown>
 }
 
 interface CaseData {
@@ -30,6 +52,7 @@ interface CaseData {
   priority: number
   ai_summary?: string[]
   validation_flags?: { severity: string; field: string; message: string }[]
+  validation_result?: ValidationResult
   legal_classification?: {
     scenario: string
     confidence: number
@@ -39,8 +62,15 @@ interface CaseData {
   lawyer_approved: boolean
   created_at: string
   messages?: { role: string; text: string }[]
-  documents?: { name: string; doc_type: string; confidence: number; needs_review?: boolean }[]
+  documents?: {
+    name: string
+    doc_type: string
+    confidence: number
+    needs_review?: boolean
+    include_in_claim?: boolean
+  }[]
   document_confidence?: number
+  pipeline_audit?: PipelineAuditEvent[]
 }
 
 const SCENARIO_LABEL: Record<string, string> = {
@@ -55,7 +85,8 @@ function statusToBadge(status: string): { status: BadgeStatus; label: string } {
     PENDING_REVIEW: { status: 'pending', label: 'Pendiente revisión' },
     LAWYER_REVIEWING: { status: 'active', label: 'En revisión' },
     APPROVED: { status: 'approved', label: 'Aprobado' },
-    SUBMITTED_TO_SIC: { status: 'ready', label: 'Enviado SIC' },
+    DELIVERED_TO_ROSA: { status: 'ready', label: 'Entregado a Rosa' },
+    SUBMITTED_TO_SIC: { status: 'ready', label: 'Entregado a Rosa' },
     PENDING_CLAIM_DECISION: { status: 'blocked', label: 'Decisión requerida' },
     ILLEGIBLE_DOCUMENT_BLOCKED: { status: 'blocked', label: 'Documento ilegible' },
     DOCS_REQUESTED: { status: 'info', label: 'Documentos solicitados' },
@@ -88,6 +119,7 @@ export default function CaseDetail() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<Tab>('draft')
   const [expandedArticle, setExpandedArticle] = useState<string | null>(null)
+  const [downloadBusy, setDownloadBusy] = useState<string | null>(null)
 
   useEffect(() => {
     if (!caseId) return
@@ -120,8 +152,8 @@ export default function CaseDetail() {
 
   async function approveCase() {
     try {
-      await api.post(`/cases/${caseId}/approve`)
-      showToast('Caso aprobado. Se presentará ante la SIC.', true)
+      const res = await api.post(`/cases/${caseId}/approve`)
+      showToast(res.data?.message || 'Caso aprobado y entregado a Rosa.', true)
       setTimeout(() => navigate('/admin'), 1500)
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || 'Error al aprobar'
@@ -142,6 +174,53 @@ export default function CaseDetail() {
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || 'Error'
       showToast(msg, false)
+    }
+  }
+
+  function _filenameFromDisposition(disposition?: string): string | null {
+    if (!disposition) return null
+    const match = disposition.match(/filename\*?=(?:UTF-8''|\")?([^\";]+)/i)
+    if (!match?.[1]) return null
+    const cleaned = match[1].replace(/\"/g, '').trim()
+    try {
+      return decodeURIComponent(cleaned)
+    } catch {
+      return cleaned
+    }
+  }
+
+  async function _downloadFromApi(url: string, fallbackName: string, busyKey: string) {
+    setDownloadBusy(busyKey)
+    try {
+      const res = await api.get(url, { responseType: 'blob' })
+      const disposition = (res.headers?.['content-disposition'] || res.headers?.['Content-Disposition']) as string | undefined
+      const filename = _filenameFromDisposition(disposition) || fallbackName
+      const blob = new Blob([res.data], { type: res.data?.type || 'application/octet-stream' })
+      const href = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = href
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(href)
+    } catch {
+      showToast('No se pudo descargar el archivo', false)
+    }
+    setDownloadBusy(null)
+  }
+
+  async function toggleIncludeInClaim(index: number, include: boolean) {
+    try {
+      await api.patch(`/cases/${caseId}/documents/${index}/include`, { include_in_claim: include })
+      setCaseData((prev) => {
+        if (!prev) return prev
+        const nextDocs = [...(prev.documents || [])]
+        if (nextDocs[index]) nextDocs[index] = { ...nextDocs[index], include_in_claim: include }
+        return { ...prev, documents: nextDocs }
+      })
+    } catch {
+      showToast('No se pudo actualizar selección del anexo', false)
     }
   }
 
@@ -167,10 +246,9 @@ export default function CaseDetail() {
   const docs = caseData.documents || []
   const hasIllegible = docs.some((d) => d.needs_review || d.confidence < 0.7)
   const articleAnalysis = caseData.legal_classification?.article_analysis || []
-  const completeness = useMemo(() => {
-    const base = Math.round((caseData.document_confidence || 0.72) * 100)
-    return Math.max(35, Math.min(100, base))
-  }, [caseData.document_confidence])
+  const validation = caseData.validation_result
+  const baseCompleteness = Math.round((caseData.document_confidence || 0.72) * 100)
+  const completeness = Math.max(35, Math.min(100, baseCompleteness))
 
   const s: Record<string, React.CSSProperties> = {
     page: { display: 'flex', flexDirection: 'column', height: '100%' },
@@ -305,6 +383,29 @@ export default function CaseDetail() {
       padding: '10px 12px',
       marginBottom: 8,
     },
+    docActions: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+    },
+    miniBtn: {
+      border: `1px solid ${colors.border}`,
+      borderRadius: 6,
+      background: '#fff',
+      color: colors.primary,
+      fontSize: 12,
+      fontWeight: 600,
+      padding: '6px 10px',
+      cursor: 'pointer',
+    },
+    includeLabel: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 6,
+      fontSize: 12,
+      color: colors.textMuted,
+      whiteSpace: 'nowrap',
+    },
     articleBtn: {
       width: '100%',
       textAlign: 'left' as const,
@@ -337,6 +438,28 @@ export default function CaseDetail() {
     timelineItem: { marginBottom: 12, paddingBottom: 10, borderBottom: `1px solid ${colors.border}` },
     timelineTime: { fontSize: 11, color: colors.textMuted, fontWeight: 700 },
     timelineTitle: { fontSize: 13, color: colors.text, fontWeight: 600, marginTop: 2 },
+    orderList: {
+      margin: '0 0 12px 0',
+      paddingLeft: 18,
+      color: colors.text,
+      fontSize: 13,
+      lineHeight: 1.7,
+    },
+    checksSummary: {
+      fontSize: 13,
+      color: colors.text,
+      marginBottom: 8,
+    },
+    checkRow: {
+      border: `1px solid ${colors.border}`,
+      borderRadius: 6,
+      background: '#fff',
+      padding: '8px 10px',
+      marginBottom: 8,
+      fontSize: 12,
+      color: colors.text,
+      lineHeight: 1.5,
+    },
   }
 
   const approveBtnStyle = (enabled: boolean): React.CSSProperties => ({
@@ -413,7 +536,7 @@ export default function CaseDetail() {
               ) : (
                 <>
                   <button style={approveBtnStyle(canAct)} disabled={!canAct} onClick={approveCase}>
-                    Aprobar y enviar SIC
+                    Aprobar y entregar a Rosa
                   </button>
                   <button
                     style={secondaryBtnStyle(canAct)}
@@ -478,6 +601,31 @@ export default function CaseDetail() {
             {activeTab === 'transcript' && (
               <div style={s.card}>
                 <h3 style={s.cardTitle}>Relato original</h3>
+                {validation && (
+                  <div style={s.articlePanel}>
+                    <div style={s.checksSummary}>
+                      Validación: <strong>{validation.passed}/{validation.total} checks</strong>. Advertencias: <strong>{(validation.warnings || []).length}</strong>.
+                    </div>
+                    <details>
+                      <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Ver checks de validación</summary>
+                      <div style={{ marginTop: 10 }}>
+                        {(validation.checks || []).map((chk, i) => (
+                          <div key={`${chk.field}-${i}`} style={s.checkRow}>
+                            <div>
+                              <strong>{chk.passed ? 'OK' : 'FALLA'}</strong> · <strong>{chk.field}</strong>
+                            </div>
+                            <div>{chk.message}</div>
+                          </div>
+                        ))}
+                        {(validation.critical_failures || []).length > 0 && (
+                          <div style={{ ...s.checkRow, borderColor: `${colors.danger}66`, color: colors.danger }}>
+                            <strong>Fallas críticas:</strong> {(validation.critical_failures || []).join(' | ')}
+                          </div>
+                        )}
+                      </div>
+                    </details>
+                  </div>
+                )}
                 {caseData.messages && caseData.messages.length > 0 ? (
                   caseData.messages.map((m, i) => (
                     <div key={i} style={m.role === 'user' ? s.bubbleUser : s.bubbleBot}>{m.text}</div>
@@ -493,6 +641,30 @@ export default function CaseDetail() {
             {activeTab === 'documents' && (
               <div style={s.card}>
                 <h3 style={s.cardTitle}>Documentos adjuntos</h3>
+                <div style={s.articlePanel}>
+                  <div style={{ fontWeight: 700, marginBottom: 8 }}>Orden de descarga</div>
+                  <ol style={s.orderList}>
+                    <li>reclamacion-SIC.pdf (borrador + anexos marcados por abogado)</li>
+                    <li>borrador-reclamacion.pdf</li>
+                    <li>documentos proporcionados por el usuario</li>
+                  </ol>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <button
+                      style={s.miniBtn}
+                      disabled={downloadBusy === 'claim'}
+                      onClick={() => _downloadFromApi(`/cases/${caseId}/downloads/reclamacion`, `reclamacion-SIC-${caseId}.pdf`, 'claim')}
+                    >
+                      {downloadBusy === 'claim' ? 'Descargando...' : '1) Descargar reclamación SIC'}
+                    </button>
+                    <button
+                      style={s.miniBtn}
+                      disabled={downloadBusy === 'draft'}
+                      onClick={() => _downloadFromApi(`/cases/${caseId}/downloads/draft`, `borrador-reclamacion-${caseId}.pdf`, 'draft')}
+                    >
+                      {downloadBusy === 'draft' ? 'Descargando...' : '2) Descargar borrador'}
+                    </button>
+                  </div>
+                </div>
                 {hasIllegible && (
                   <div style={{ ...s.articlePanel, borderColor: `${colors.warning}55`, color: '#8A5A15' }}>
                     Uno o más documentos requieren revisión manual del abogado.
@@ -518,10 +690,27 @@ export default function CaseDetail() {
                           <div style={{ fontSize: 12, color: colors.textMuted }}>{doc.doc_type}</div>
                         </div>
                       </div>
-                      <Badge
-                        status={needsReview ? 'pending' : 'approved'}
-                        label={needsReview ? 'Pendiente revisión' : `${Math.round(doc.confidence * 100)}%`}
-                      />
+                      <div style={s.docActions}>
+                        <label style={s.includeLabel}>
+                          <input
+                            type="checkbox"
+                            checked={doc.include_in_claim !== false}
+                            onChange={(e) => toggleIncludeInClaim(i, e.target.checked)}
+                          />
+                          Incluir en reclamación
+                        </label>
+                        <button
+                          style={s.miniBtn}
+                          disabled={downloadBusy === `doc-${i}`}
+                          onClick={() => _downloadFromApi(`/cases/${caseId}/documents/${i}/download`, doc.name || `documento-${i + 1}`, `doc-${i}`)}
+                        >
+                          {downloadBusy === `doc-${i}` ? 'Descargando...' : '3) Descargar'}
+                        </button>
+                        <Badge
+                          status={needsReview ? 'pending' : 'approved'}
+                          label={needsReview ? 'Pendiente revisión' : `${Math.round(doc.confidence * 100)}%`}
+                        />
+                      </div>
                     </div>
                   )
                 })}
@@ -571,6 +760,18 @@ export default function CaseDetail() {
                     {caseData.validation_flags.map((f, i) => (
                       <div key={i} style={s.articlePanel}>
                         <strong>{f.field}</strong>: {f.message}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {(caseData.pipeline_audit || []).length > 0 && (
+                  <div style={s.card}>
+                    <h3 style={s.cardTitle}>Audit log del pipeline</h3>
+                    {(caseData.pipeline_audit || []).slice(-30).reverse().map((row, i) => (
+                      <div key={`${row.timestamp}-${i}`} style={s.timelineItem}>
+                        <div style={s.timelineTime}>{new Date(row.timestamp).toLocaleString('es-CO')}</div>
+                        <div style={s.timelineTitle}>{row.stage} · {row.event}</div>
                       </div>
                     ))}
                   </div>

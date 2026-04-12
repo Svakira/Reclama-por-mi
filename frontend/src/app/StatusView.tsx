@@ -10,8 +10,9 @@ import { colors, shadows } from '../styles/tokens'
 const STATUS_CONFIG: Record<string, { label: string; badge: 'pending' | 'active' | 'approved' | 'ready' | 'blocked' | 'info' | 'rejected'; hint: string }> = {
   PENDING_REVIEW: { label: 'En revisión por el abogado', badge: 'pending', hint: 'Tu caso está en la cola de revisión. Un abogado lo analizará pronto.' },
   LAWYER_REVIEWING: { label: 'El abogado está revisando tu caso', badge: 'active', hint: 'El abogado de la clínica está analizando tu reclamación.' },
-  APPROVED: { label: 'Aprobado — preparando envío', badge: 'approved', hint: 'Tu reclamación fue aprobada y está siendo preparada para enviar a la SIC.' },
-  SUBMITTED_TO_SIC: { label: 'Enviado a la SIC', badge: 'ready', hint: 'Tu reclamación fue presentada formalmente ante la Superintendencia de Industria y Comercio.' },
+  APPROVED: { label: 'Aprobado — preparando entrega', badge: 'approved', hint: 'Tu reclamación fue aprobada y está siendo preparada para entregarte el PDF final.' },
+  DELIVERED_TO_ROSA: { label: 'Entregado por WhatsApp', badge: 'ready', hint: 'Recibirás por WhatsApp el PDF final y un enlace con recursos explicativos de la SIC.' },
+  SUBMITTED_TO_SIC: { label: 'Entregado por WhatsApp', badge: 'ready', hint: 'Recibirás por WhatsApp el PDF final y un enlace con recursos explicativos de la SIC.' },
   DOCS_REQUESTED: { label: 'Se necesitan más documentos', badge: 'info', hint: 'El abogado necesita documentos adicionales. Nos comunicaremos contigo pronto.' },
   PENDING_CLAIM_DECISION: { label: 'En revisión especial', badge: 'pending', hint: 'Tu caso está siendo revisado por un abogado. Recibirás una respuesta pronto.' },
   NO_CLAIM_CONFIRMED: { label: 'Análisis completado', badge: 'info', hint: 'El abogado analizó tu caso y tiene una respuesta para ti. Nos comunicaremos contigo.' },

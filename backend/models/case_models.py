@@ -6,7 +6,7 @@ from pydantic import BaseModel
 class Case(BaseModel):
     case_id: str
     consumer_name: str
-    status: str  # PENDING_REVIEW | LAWYER_REVIEWING | APPROVED | SUBMITTED_TO_SIC | CLOSED | PENDING_CLAIM_DECISION
+    status: str  # PENDING_REVIEW | LAWYER_REVIEWING | APPROVED | DELIVERED_TO_ROSA | CLOSED | PENDING_CLAIM_DECISION
     priority: int
     case_type: str  # A | B | C | UNKNOWN
     created_at: str
@@ -17,6 +17,7 @@ class Case(BaseModel):
     lawyer_id: Optional[str] = None
     ai_summary: Optional[list[str]] = None
     validation_flags: list[dict] = []
+    validation_result: Optional[dict] = None
     legal_classification: Optional[dict] = None
     consumer_cedula: Optional[str] = None
     consumer_address: Optional[str] = None
@@ -34,6 +35,7 @@ class Case(BaseModel):
     tertiary_pretension: Optional[str] = None
     legal_grounds: Optional[str] = None
     complaint_pdf_path: Optional[str] = None
+    sic_procedure_guide: Optional[dict] = None
     # Stage 3 gate
     document_illegible: bool = False
     document_confidence: float = 1.0
@@ -43,6 +45,8 @@ class Case(BaseModel):
     # Stage 10 gate
     filing_option_chosen: Optional[int] = None  # 1 | 2 | 3
     rosa_document_consent: bool = False
+    delivery_token: Optional[str] = None
+    delivered_to_rosa_at: Optional[str] = None
 
 
 class DraftVersion(BaseModel):
@@ -78,7 +82,7 @@ class NotifyRegisterRequest(BaseModel):
 
 class NotifySendRequest(BaseModel):
     case_id: str
-    event: str  # CASE_CREATED | LAWYER_REVIEWING | DRAFT_APPROVED | SUBMITTED_TO_SIC
+    event: str  # CASE_CREATED | LAWYER_REVIEWING | DRAFT_APPROVED | CASE_COMPLETED
 
 
 class LoginRequest(BaseModel):

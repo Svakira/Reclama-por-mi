@@ -25,7 +25,7 @@ export default function Settings() {
   return (
     <AdminLayout>
       <div style={{ padding: 28, maxWidth: 600 }}>
-        <h2 style={{ margin: '0 0 20px', fontSize: 22, fontWeight: 700, color: colors.text, fontFamily: typography.heading }}>Configuración</h2>
+        <h2 style={{ margin: '0 0 20px', fontSize: 22, fontWeight: 700, color: colors.text, fontFamily: typography.display }}>Configuración</h2>
 
         <div style={cardStyle}>
           <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: colors.text }}>Perfil del abogado</h3>
@@ -50,7 +50,7 @@ export default function Settings() {
         <div style={cardStyle}>
           <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: colors.text }}>Sistema</h3>
           <div style={{ fontSize: 13, color: colors.textMuted, lineHeight: 1.7 }}>
-            <div>Versión: <strong>JusticIA v1.0</strong></div>
+            <div>Version: <strong>RECLAMA POR MI v1.0</strong></div>
             <div>Motor IA: <strong>Groq (Llama 3.3 70B)</strong></div>
             <div>Base de datos: <strong>Firestore (In-memory dev)</strong></div>
           </div>

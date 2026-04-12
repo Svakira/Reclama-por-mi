@@ -75,13 +75,17 @@ export default function Sidebar({ pendingCount = 0 }: SidebarProps) {
       width: 32,
       height: 32,
       borderRadius: 6,
-      background: colors.primary,
+      background: '#fff',
+      overflow: 'hidden',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      color: '#fff',
-      fontWeight: 700,
-      fontSize: 11,
+    },
+    logoImg: {
+      width: '100%',
+      height: '100%',
+      objectFit: 'cover',
+      display: 'block',
     },
     sectionTitle: {
       fontSize: 11,
@@ -162,8 +166,10 @@ export default function Sidebar({ pendingCount = 0 }: SidebarProps) {
   return (
     <aside style={s.sidebar}>
       <div style={s.logo}>
-        <div style={s.logoIcon}>JI</div>
-        <span>JusticIA</span>
+        <div style={s.logoIcon}>
+          <img src="/logo-icon.png" alt="RECLAMA POR MI" style={s.logoImg} />
+        </div>
+        <span>RECLAMA POR MI</span>
       </div>
 
       {navSections.map((section) => (

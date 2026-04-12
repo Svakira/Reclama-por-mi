@@ -122,6 +122,34 @@ def _build_article_analysis(classification: dict) -> list[dict]:
     ]
 
 
+def _post_process_classification(classification: dict, has_pqr: bool) -> dict:
+    """Apply deterministic legal safeguards after LLM output."""
+    out = dict(classification or {})
+    scenario = str(out.get("scenario") or "NO_CLAIM").upper().strip()
+
+    if scenario not in {"A", "B", "C", "SUPERFINANCIERA", "NO_CLAIM"}:
+        scenario = "NO_CLAIM"
+
+    out["scenario"] = scenario
+
+    if scenario == "SUPERFINANCIERA":
+        out["claim_valid"] = False
+        out["rejection_reason"] = out.get("rejection_reason") or "superfinanciera_competence"
+
+    if scenario == "C" and not has_pqr:
+        out["claim_valid"] = False
+        out["rejection_reason"] = "requires_pqr_first"
+
+    out.setdefault("claim_valid", False)
+    out.setdefault("rejection_reason", None)
+    out.setdefault("applicable_articles", [])
+    out.setdefault("confidence", 0.0)
+    out.setdefault("legal_summary", "Sin resumen jurídico disponible.")
+    out.setdefault("pretension_type", None)
+
+    return out
+
+
 def classify(
     narrative: str,
     document_fields: dict,
@@ -152,6 +180,7 @@ def classify(
         result = chat_complete(messages)
         result = re.sub(r"```json\s*|\s*```", "", result).strip()
         classification = json.loads(result)
+        classification = _post_process_classification(classification, has_pqr=has_pqr)
         classification["article_analysis"] = _build_article_analysis(classification)
         print(
             f"[AGENT][LegalClassifier] done scenario={classification.get('scenario')} "

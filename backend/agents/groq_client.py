@@ -133,3 +133,10 @@ def chat_complete(messages: list, model: str = PRIMARY_MODEL, **kwargs) -> str:
         f"messages={len(messages)} output={_safe_text_preview(content or '')}"
     )
     return content
+
+
+def chat_complete_fast(messages: list, **kwargs) -> str:
+    """Quick inference using the smaller/faster model. Use for analysis,
+    classification, and field-mapping tasks where speed matters more than
+    raw generation quality."""
+    return chat_complete(messages, model=FALLBACK_MODEL, **kwargs)

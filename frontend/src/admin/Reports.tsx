@@ -23,7 +23,7 @@ export default function Reports() {
       for (const c of cases) {
         if (c.status === 'PENDING_REVIEW' || c.status === 'PENDING_CLAIM_DECISION') s.pending++
         else if (c.status === 'LAWYER_REVIEWING') s.reviewing++
-        else if (c.status === 'APPROVED' || c.status === 'SUBMITTED_TO_SIC') s.approved++
+        else if (c.status === 'APPROVED' || c.status === 'DELIVERED_TO_ROSA' || c.status === 'SUBMITTED_TO_SIC') s.approved++
         else if (c.status === 'CLOSED') s.closed++
         s.byType[c.case_type] = (s.byType[c.case_type] || 0) + 1
       }
@@ -48,7 +48,7 @@ export default function Reports() {
   return (
     <AdminLayout>
       <div style={{ padding: 28 }}>
-        <h2 style={{ margin: '0 0 20px', fontSize: 22, fontWeight: 700, color: colors.text, fontFamily: typography.heading }}>Reportes</h2>
+        <h2 style={{ margin: '0 0 20px', fontSize: 22, fontWeight: 700, color: colors.text, fontFamily: typography.display }}>Reportes</h2>
         {loading || !stats ? (
           <p style={{ color: colors.textMuted }}>Cargando estadísticas...</p>
         ) : (

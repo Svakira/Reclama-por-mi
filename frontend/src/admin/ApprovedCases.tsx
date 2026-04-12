@@ -28,7 +28,7 @@ export default function ApprovedCases() {
   useEffect(() => {
     api.get('/cases').then(r => {
       const approved = (r.data || []).filter((c: Case) =>
-        c.status === 'APPROVED' || c.status === 'SUBMITTED_TO_SIC'
+        c.status === 'APPROVED' || c.status === 'DELIVERED_TO_ROSA' || c.status === 'SUBMITTED_TO_SIC'
       )
       setCases(approved)
     }).finally(() => setLoading(false))
@@ -40,7 +40,7 @@ export default function ApprovedCases() {
   return (
     <AdminLayout>
       <div style={{ padding: 28 }}>
-        <h2 style={{ margin: '0 0 20px', fontSize: 22, fontWeight: 700, color: colors.text, fontFamily: typography.heading }}>Casos aprobados</h2>
+        <h2 style={{ margin: '0 0 20px', fontSize: 22, fontWeight: 700, color: colors.text, fontFamily: typography.display }}>Casos aprobados</h2>
         {loading ? (
           <p style={{ color: colors.textMuted }}>Cargando...</p>
         ) : cases.length === 0 ? (
@@ -64,7 +64,7 @@ export default function ApprovedCases() {
                   <td style={tdStyle}><span style={{ color: colors.textMuted, fontSize: 12 }}>{SCENARIO_LABEL[c.case_type] || c.case_type}</span></td>
                   <td style={tdStyle}>
                     <span style={{ display: 'inline-block', padding: '6px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: 'rgba(74,103,65,0.15)', color: colors.success }}>
-                      {c.status === 'SUBMITTED_TO_SIC' ? 'Enviado SIC' : 'Aprobado'}
+                      {c.status === 'DELIVERED_TO_ROSA' || c.status === 'SUBMITTED_TO_SIC' ? 'Entregado a Rosa' : 'Aprobado'}
                     </span>
                   </td>
                   <td style={tdStyle}><span style={{ color: colors.textMuted, fontSize: 12 }}>{new Date(c.created_at).toLocaleDateString('es-CO')}</span></td>

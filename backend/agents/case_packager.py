@@ -7,6 +7,7 @@ Stage 8: CasePackager
 - Triggers WhatsApp notification to Rosa
 """
 from datetime import datetime, timezone
+import uuid
 from typing import Optional
 
 
@@ -49,6 +50,8 @@ async def package_case(
     consumer_data: dict,
     provider_data: dict,
     uploaded_documents: list | None = None,
+    pipeline_audit: list | None = None,
+    sic_procedure_guide: dict | None = None,
 ) -> dict:
     """
     Package everything into a case record and save to Firestore.
@@ -64,13 +67,20 @@ async def package_case(
     from backend.db.firestore_client import get_next_case_number
     case_id = await get_next_case_number()
     now = datetime.now(timezone.utc).isoformat()
+    delivery_token = uuid.uuid4().hex
 
     priority = calculate_priority(legal_classification, validation_result, document_confidence)
 
     scenario = legal_classification.get("scenario", "UNKNOWN")
     claim_valid = legal_classification.get("claim_valid", False)
 
-    docs_need_review = any(d.get("needs_review") for d in (uploaded_documents or []))
+    normalized_documents = []
+    for d in (uploaded_documents or []):
+        row = dict(d)
+        row["include_in_claim"] = bool(d.get("include_in_claim", True))
+        normalized_documents.append(row)
+
+    docs_need_review = any(d.get("needs_review") for d in normalized_documents)
 
     if not claim_valid:
         status = "PENDING_CLAIM_DECISION"
@@ -118,14 +128,25 @@ async def package_case(
         "updated_at": now,
         "ai_summary": ai_summary,
         "validation_flags": validation_flags,
+        "validation_result": {
+            "valid": bool(validation_result.get("valid", False)),
+            "passed": int(validation_result.get("passed", 0)),
+            "total": int(validation_result.get("total", 0)),
+            "checks": validation_result.get("checks", []),
+            "warnings": validation_result.get("warnings", []),
+            "critical_failures": validation_result.get("critical_failures", []),
+        },
         "legal_classification": legal_classification,
-        "documents": uploaded_documents or [],
+        "documents": normalized_documents,
         "document_confidence": document_confidence,
         "docs_need_review": docs_need_review,
         "claim_valid": claim_valid,
         "lawyer_approved": False,
         "notification_log": [],
         "simple_explanation_for_rosa": simple_explanation,
+        "sic_procedure_guide": sic_procedure_guide or {},
+        "delivery_token": delivery_token,
+        "pipeline_audit": pipeline_audit or [],
     }
 
     draft = {
