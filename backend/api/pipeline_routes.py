@@ -323,13 +323,22 @@ async def upload_document(
     session["document_confidence"] = parse_result["confidence"]
 
     scenario = ((session["classification"] or {}).get("scenario") or "A")
-    inferred_type = _infer_doc_type(
-        parse_result.get("raw_text", ""),
-        parse_result.get("fields", {}),
-        scenario,
-    )
+    image_type = parse_result.get("image_type")
+    evidence_desc = parse_result.get("evidence_description")
 
-    needs_review = parse_result["blocked"] or parse_result["confidence"] < 0.70
+    if image_type == "evidence_photo":
+        inferred_type = "evidencia_defecto"
+    else:
+        inferred_type = _infer_doc_type(
+            parse_result.get("raw_text", ""),
+            parse_result.get("fields", {}),
+            scenario,
+        )
+
+    if image_type == "evidence_photo":
+        needs_review = False
+    else:
+        needs_review = parse_result.get("blocked", False) or parse_result["confidence"] < 0.70
 
     session["uploaded_docs"].append({
         "filename": file.filename or "doc.pdf",
@@ -337,6 +346,7 @@ async def upload_document(
         "confidence": parse_result["confidence"],
         "fields": list(parse_result.get("fields", {}).keys()),
         "needs_review": needs_review,
+        "evidence_description": evidence_desc,
     })
 
     required = REQUIRED_DOCS_BY_SCENARIO.get(scenario, ["factura"])
@@ -345,44 +355,57 @@ async def upload_document(
 
     session["stage"] = "DOCS_NEEDED"
 
-    extracted_summary = []
-    for k, v in parse_result.get("fields", {}).items():
-        if v:
-            extracted_summary.append(f"- {k}: {v}")
-
-    type_label = DOC_LABELS.get(inferred_type, inferred_type)
-    summary_block = "\n".join(extracted_summary[:8])
-
-    review_note = ""
-    if needs_review:
-        review_note = " (pendiente de revisión por el abogado)"
-
-    if missing:
-        missing_labels = [DOC_LABELS.get(d, d) for d in missing]
-        msg = (
-            f"Recibí tu documento ({file.filename}){review_note}.\n"
-        )
-        if summary_block:
-            msg += f"Datos extraídos:\n{summary_block}\n\n"
+    if image_type == "evidence_photo":
+        msg = f"Recibí tu foto como evidencia ({file.filename}).\n"
+        if evidence_desc:
+            msg += f"Lo que veo: {evidence_desc}\n\n"
+        if missing:
+            missing_labels = [DOC_LABELS.get(d, d) for d in missing]
+            msg += (
+                "Para completar tu caso, también necesito:\n" +
+                "\n".join(f"- {lbl}" for lbl in missing_labels) +
+                "\n\nSúbelos con el botón de adjuntar, o presiona 'Procesar mi reclamación' si no los tienes."
+            )
         else:
-            msg += "\n"
-        msg += (
-            f"Para completar tu caso, también necesito:\n" +
-            "\n".join(f"- {lbl}" for lbl in missing_labels) +
-            "\n\nSúbelos con el botón de adjuntar, o presiona 'Procesar mi reclamación' si no los tienes."
-        )
+            msg += (
+                "Ya tengo todos los documentos necesarios. "
+                "Presiona 'Procesar mi reclamación' para continuar."
+            )
     else:
-        msg = (
-            f"Recibí tu documento ({file.filename}){review_note}.\n"
-        )
-        if summary_block:
-            msg += f"Datos extraídos:\n{summary_block}\n\n"
+        extracted_summary = []
+        for k, v in parse_result.get("fields", {}).items():
+            if v:
+                extracted_summary.append(f"- {k}: {v}")
+
+        type_label = DOC_LABELS.get(inferred_type, inferred_type)
+        summary_block = "\n".join(extracted_summary[:8])
+
+        review_note = ""
+        if needs_review:
+            review_note = " (pendiente de revisión por el abogado)"
+
+        if missing:
+            missing_labels = [DOC_LABELS.get(d, d) for d in missing]
+            msg = f"Recibí tu {type_label} ({file.filename}){review_note}.\n"
+            if summary_block:
+                msg += f"Datos extraídos:\n{summary_block}\n\n"
+            else:
+                msg += "\n"
+            msg += (
+                "Para completar tu caso, también necesito:\n" +
+                "\n".join(f"- {lbl}" for lbl in missing_labels) +
+                "\n\nSúbelos con el botón de adjuntar, o presiona 'Procesar mi reclamación' si no los tienes."
+            )
         else:
-            msg += "\n"
-        msg += (
-            "Ya tengo todos los documentos necesarios. "
-            "Presiona 'Procesar mi reclamación' para continuar."
-        )
+            msg = f"Recibí tu {type_label} ({file.filename}){review_note}.\n"
+            if summary_block:
+                msg += f"Datos extraídos:\n{summary_block}\n\n"
+            else:
+                msg += "\n"
+            msg += (
+                "Ya tengo todos los documentos necesarios. "
+                "Presiona 'Procesar mi reclamación' para continuar."
+            )
 
     return {
         "session_id": session_id,
