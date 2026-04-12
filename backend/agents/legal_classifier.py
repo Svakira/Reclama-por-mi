@@ -81,8 +81,45 @@ Responde SOLO con JSON válido:
   "applicable_articles": ["ART_7_LEY_1480", ...],
   "confidence": 0.0-1.0,
   "legal_summary": "resumen del fundamento jurídico en 2-3 oraciones",
-  "pretension_type": "garantia"|"cobro_indebido"|"incumplimiento_servicio"|"publicidad_enganosa"|null
+  "pretension_type": "garantia"|"cobro_indebido"|"incumplimiento_servicio"|"publicidad_enganosa"|null,
+  "article_analysis": [
+    {{
+      "article_id": "ART_7_LEY_1480",
+      "confidence_by_article": 0.0-1.0,
+      "relevant_excerpt": "extracto normativo o fáctico relevante",
+      "reasoning_summary": "por qué este artículo aplica al caso"
+    }}
+  ]
 }}"""
+
+
+def _build_article_analysis(classification: dict) -> list[dict]:
+    article_ids = classification.get("applicable_articles") or []
+    confidence = float(classification.get("confidence") or 0.0)
+    legal_summary = classification.get("legal_summary") or "Sin resumen jurídico disponible."
+
+    existing = classification.get("article_analysis")
+    if isinstance(existing, list) and existing:
+        normalized = []
+        for row in existing:
+            article_id = row.get("article_id") or "ART_UNKNOWN"
+            normalized.append({
+                "article_id": article_id,
+                "confidence_by_article": float(row.get("confidence_by_article") or confidence),
+                "relevant_excerpt": row.get("relevant_excerpt") or "Sin extracto específico.",
+                "reasoning_summary": row.get("reasoning_summary") or legal_summary,
+            })
+        return normalized
+
+    return [
+        {
+            "article_id": article_id,
+            "confidence_by_article": confidence,
+            "relevant_excerpt": "Extracto legal pendiente de expansión por agente.",
+            "reasoning_summary": legal_summary,
+        }
+        for article_id in article_ids
+    ]
 
 
 def classify(
@@ -115,6 +152,7 @@ def classify(
         result = chat_complete(messages)
         result = re.sub(r"```json\s*|\s*```", "", result).strip()
         classification = json.loads(result)
+        classification["article_analysis"] = _build_article_analysis(classification)
         print(
             f"[AGENT][LegalClassifier] done scenario={classification.get('scenario')} "
             f"claim_valid={classification.get('claim_valid')} confidence={classification.get('confidence')}"
@@ -131,4 +169,5 @@ def classify(
             "confidence": 0.0,
             "legal_summary": f"Error en clasificación automática: {e}. Requiere revisión manual.",
             "pretension_type": None,
+            "article_analysis": [],
         }

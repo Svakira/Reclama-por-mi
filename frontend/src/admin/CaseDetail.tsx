@@ -1,35 +1,52 @@
-// frontend/src/admin/CaseDetail.tsx
-import React, { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import React, { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import api from '../api/client'
 import AdminLayout from './AdminLayout'
 import Badge from '../components/Badge'
-import { colors, shadows } from '../styles/tokens'
+import { colors, shadows, typography } from '../styles/tokens'
 
 type Tab = 'draft' | 'transcript' | 'documents' | 'analysis'
 type BadgeStatus = 'pending' | 'active' | 'approved' | 'rejected' | 'ready' | 'blocked' | 'info'
+
+interface ArticleAnalysis {
+  article_id: string
+  confidence_by_article: number
+  relevant_excerpt: string
+  reasoning_summary: string
+}
 
 interface CaseData {
   case_id: string
   consumer_name: string
   consumer_cedula?: string
   consumer_address?: string
+  consumer_phone?: string
+  consumer_email?: string
+  provider_name?: string
+  provider_nit?: string
+  provider_address?: string
   status: string
   case_type: string
   priority: number
   ai_summary?: string[]
   validation_flags?: { severity: string; field: string; message: string }[]
-  legal_classification?: { scenario: string; confidence: number; applicable_articles: string[] }
+  legal_classification?: {
+    scenario: string
+    confidence: number
+    applicable_articles: string[]
+    article_analysis?: ArticleAnalysis[]
+  }
   lawyer_approved: boolean
   created_at: string
   messages?: { role: string; text: string }[]
   documents?: { name: string; doc_type: string; confidence: number }[]
+  document_confidence?: number
 }
 
 const SCENARIO_LABEL: Record<string, string> = {
-  A: 'Producto defectuoso (Ley 1480 arts. 7, 10, 11)',
-  B: 'Cobro indebido financiero (Ley 1480 + Ley 45/1990)',
-  C: 'Telecomunicaciones con PQR previa (Ley 1341)',
+  A: 'Producto defectuoso (Ley 1480)',
+  B: 'Cobro indebido (Ley 1480 + Ley 45/1990)',
+  C: 'Telecomunicaciones (Ley 1341)',
   UNKNOWN: 'Sin clasificar',
 }
 
@@ -40,8 +57,8 @@ function statusToBadge(status: string): { status: BadgeStatus; label: string } {
     APPROVED: { status: 'approved', label: 'Aprobado' },
     SUBMITTED_TO_SIC: { status: 'ready', label: 'Enviado SIC' },
     PENDING_CLAIM_DECISION: { status: 'blocked', label: 'Decisión requerida' },
-    ILLEGIBLE_DOCUMENT_BLOCKED: { status: 'blocked', label: 'Doc. ilegible' },
-    DOCS_REQUESTED: { status: 'info', label: 'Docs. solicitados' },
+    ILLEGIBLE_DOCUMENT_BLOCKED: { status: 'blocked', label: 'Documento ilegible' },
+    DOCS_REQUESTED: { status: 'info', label: 'Documentos solicitados' },
     CLOSED: { status: 'info', label: 'Cerrado' },
   }
   return map[status] || { status: 'info', label: status.replace(/_/g, ' ') }
@@ -70,6 +87,7 @@ export default function CaseDetail() {
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<Tab>('draft')
+  const [expandedArticle, setExpandedArticle] = useState<string | null>(null)
 
   useEffect(() => {
     if (!caseId) return
@@ -103,8 +121,8 @@ export default function CaseDetail() {
   async function approveCase() {
     try {
       await api.post(`/cases/${caseId}/approve`)
-      showToast('¡Caso aprobado! Se presentará ante la SIC.', true)
-      setTimeout(() => navigate('/admin'), 2000)
+      showToast('Caso aprobado. Se presentará ante la SIC.', true)
+      setTimeout(() => navigate('/admin'), 1500)
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || 'Error al aprobar'
       showToast(msg, false)
@@ -116,268 +134,323 @@ export default function CaseDetail() {
       await api.post(`/lawyer/claim-decision/${caseId}`, { decision })
       showToast(
         decision === 'CONFIRM_NO_CLAIM'
-          ? 'Confirmado como NO CLAIM. Se generará documento de rechazo.'
+          ? 'Confirmado como NO CLAIM. Se generará documento de cierre.'
           : 'Caso reactivado como válido.',
         true
       )
-      setTimeout(() => navigate('/admin'), 2000)
+      setTimeout(() => navigate('/admin'), 1500)
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || 'Error'
       showToast(msg, false)
     }
   }
 
-  if (loading) return (
-    <AdminLayout>
-      <div style={{ padding: 40, color: colors.textMuted }}>Cargando caso...</div>
-    </AdminLayout>
-  )
-  if (!caseData) return (
-    <AdminLayout>
-      <div style={{ padding: 40, color: colors.danger }}>Caso no encontrado</div>
-    </AdminLayout>
-  )
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div style={{ padding: 36, color: colors.textMuted }}>Cargando caso...</div>
+      </AdminLayout>
+    )
+  }
+
+  if (!caseData) {
+    return (
+      <AdminLayout>
+        <div style={{ padding: 36, color: colors.danger }}>Caso no encontrado</div>
+      </AdminLayout>
+    )
+  }
 
   const isPendingClaim = caseData.status === 'PENDING_CLAIM_DECISION'
   const canAct = isPendingClaim || (!caseData.lawyer_approved && caseData.status !== 'CLOSED')
   const badgeInfo = statusToBadge(caseData.status)
   const docs = caseData.documents || []
   const hasIllegible = docs.some((d) => d.confidence < 0.7)
+  const articleAnalysis = caseData.legal_classification?.article_analysis || []
+  const completeness = useMemo(() => {
+    const base = Math.round((caseData.document_confidence || 0.72) * 100)
+    return Math.max(35, Math.min(100, base))
+  }, [caseData.document_confidence])
 
   const s: Record<string, React.CSSProperties> = {
     page: { display: 'flex', flexDirection: 'column', height: '100%' },
-    caseHeader: {
+    header: {
       background: colors.surface,
       borderBottom: `1px solid ${colors.border}`,
-      padding: '16px 28px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 16,
-      flexShrink: 0,
+      padding: '22px 28px',
     },
-    caseHeaderLeft: { display: 'flex', flexDirection: 'column', gap: 4 },
-    caseName: { fontSize: 20, fontWeight: 700, color: colors.text, margin: 0 },
-    caseMeta: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: colors.textMuted },
-    caseHeaderRight: { display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0 },
-    backBtn: {
+    back: {
+      border: 'none',
       background: 'transparent',
-      border: `1px solid ${colors.border}`,
-      borderRadius: 6,
-      padding: '7px 14px',
-      color: colors.textMuted,
+      color: colors.primary,
       cursor: 'pointer',
       fontSize: 13,
+      fontWeight: 600,
+      padding: 0,
+      marginBottom: 10,
     },
-    tabBar: {
-      background: colors.surface,
-      borderBottom: `1px solid ${colors.border}`,
+    headerMain: {
       display: 'flex',
-      padding: '0 28px',
-      flexShrink: 0,
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      gap: 16,
+      marginBottom: 14,
     },
-    tabContent: {
+    title: { margin: 0, fontSize: 28, fontWeight: 700, color: colors.text },
+    headerActions: { display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' },
+    metaGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+      gap: 14,
+    },
+    metaLabel: {
+      fontSize: 11,
+      fontWeight: 700,
+      textTransform: 'uppercase',
+      color: colors.textMuted,
+      letterSpacing: '0.05em',
+    },
+    metaValue: { fontSize: 13, color: colors.text, fontWeight: 600, marginTop: 2 },
+    tabs: {
+      display: 'flex',
+      borderBottom: `1px solid ${colors.border}`,
+      background: colors.surface,
+      padding: '0 20px',
+      gap: 2,
+      overflowX: 'auto',
+    },
+    tabPanel: {
+      display: 'grid',
+      gridTemplateColumns: '2fr 1fr',
+      gap: 20,
+      padding: 20,
+      overflowY: 'auto',
       flex: 1,
-      padding: '24px 28px',
-      overflowY: 'auto' as const,
+    },
+    leftCol: { minWidth: 0 },
+    rightCol: { minWidth: 250 },
+    card: {
+      background: colors.surface,
+      border: `1px solid ${colors.border}`,
+      borderRadius: 8,
+      padding: 18,
+      marginBottom: 16,
+      boxShadow: shadows.card,
+    },
+    cardTitle: {
+      margin: '0 0 10px 0',
+      fontSize: 14,
+      fontWeight: 700,
+      color: colors.text,
+      textTransform: 'uppercase',
+      letterSpacing: '0.03em',
     },
     draftArea: {
       width: '100%',
-      minHeight: 480,
-      background: '#f8f9fa',
+      minHeight: 460,
+      background: '#fff',
       border: `1px solid ${colors.border}`,
       borderRadius: 8,
-      padding: 20,
+      padding: 16,
       color: colors.text,
       fontSize: 14,
       lineHeight: 1.7,
-      fontFamily: 'monospace',
+      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
       resize: 'vertical' as const,
       outline: 'none',
       boxSizing: 'border-box' as const,
     },
     saveBtn: {
-      marginTop: 12,
+      marginTop: 10,
       background: colors.primary,
       border: 'none',
       borderRadius: 6,
-      padding: '8px 18px',
+      padding: '9px 18px',
       color: '#fff',
       fontWeight: 600,
       cursor: 'pointer',
       fontSize: 13,
     },
-    infoCard: {
-      background: colors.surface,
+    bubbleBot: {
+      maxWidth: '85%',
+      padding: '10px 14px',
+      borderRadius: '16px 16px 16px 5px',
+      background: '#fff',
       border: `1px solid ${colors.border}`,
-      borderRadius: 8,
-      padding: 20,
-      marginBottom: 16,
-    },
-    infoTitle: {
-      fontSize: 12,
-      fontWeight: 700,
-      color: colors.primary,
-      textTransform: 'uppercase' as const,
-      letterSpacing: '0.05em',
-      marginBottom: 12,
-    },
-    articleItem: {
-      background: colors.bg,
-      border: `1px solid ${colors.border}`,
-      borderRadius: 6,
-      padding: '8px 12px',
-      marginBottom: 6,
-      fontSize: 13,
       color: colors.text,
+      fontSize: 13,
+      lineHeight: 1.55,
+      marginBottom: 8,
+      whiteSpace: 'pre-wrap',
     },
-    docItem: {
+    bubbleUser: {
+      maxWidth: '85%',
+      padding: '10px 14px',
+      borderRadius: '16px 16px 5px 16px',
+      background: colors.primary,
+      color: '#fff',
+      fontSize: 13,
+      lineHeight: 1.55,
+      marginLeft: 'auto',
+      marginBottom: 8,
+      whiteSpace: 'pre-wrap',
+    },
+    docRow: {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      background: colors.surface,
       border: `1px solid ${colors.border}`,
       borderRadius: 6,
-      padding: '10px 16px',
+      background: colors.surface,
+      padding: '10px 12px',
       marginBottom: 8,
     },
+    articleBtn: {
+      width: '100%',
+      textAlign: 'left' as const,
+      border: `1px solid ${colors.border}`,
+      borderRadius: 6,
+      background: '#F8FAFC',
+      padding: '10px 12px',
+      marginBottom: 8,
+      fontSize: 13,
+      fontWeight: 600,
+      color: colors.text,
+      cursor: 'pointer',
+    },
+    articlePanel: {
+      border: `1px solid ${colors.border}`,
+      borderRadius: 6,
+      background: '#fff',
+      padding: '10px 12px',
+      marginBottom: 10,
+      fontSize: 13,
+      color: colors.textMuted,
+      lineHeight: 1.55,
+    },
+    progressBar: {
+      height: 8,
+      borderRadius: 4,
+      background: `linear-gradient(90deg, ${colors.primary} ${completeness}%, ${colors.border} ${completeness}%)`,
+      marginTop: 6,
+    },
+    timelineItem: { marginBottom: 12, paddingBottom: 10, borderBottom: `1px solid ${colors.border}` },
+    timelineTime: { fontSize: 11, color: colors.textMuted, fontWeight: 700 },
+    timelineTitle: { fontSize: 13, color: colors.text, fontWeight: 600, marginTop: 2 },
   }
 
   const approveBtnStyle = (enabled: boolean): React.CSSProperties => ({
     background: colors.success,
     border: 'none',
     borderRadius: 6,
-    padding: '8px 18px',
+    padding: '10px 16px',
     color: '#fff',
     fontWeight: 700,
     cursor: enabled ? 'pointer' : 'not-allowed',
-    fontSize: 14,
-    opacity: enabled ? 1 : 0.4,
+    fontSize: 13,
+    opacity: enabled ? 1 : 0.5,
+    fontFamily: typography.body,
   })
 
-  const rejectBtnStyle = (enabled: boolean): React.CSSProperties => ({
-    background: colors.danger,
-    border: 'none',
+  const secondaryBtnStyle = (enabled: boolean, danger = false): React.CSSProperties => ({
+    background: '#fff',
+    border: `1px solid ${danger ? colors.danger : colors.primary}`,
     borderRadius: 6,
-    padding: '8px 18px',
-    color: '#fff',
-    fontWeight: 700,
+    padding: '10px 16px',
+    color: danger ? colors.danger : colors.primary,
+    fontWeight: 600,
     cursor: enabled ? 'pointer' : 'not-allowed',
-    fontSize: 14,
-    opacity: enabled ? 1 : 0.4,
+    fontSize: 13,
+    opacity: enabled ? 1 : 0.5,
+    fontFamily: typography.body,
   })
 
   const tabStyle = (tab: Tab): React.CSSProperties => ({
-    padding: '12px 20px',
+    padding: '12px 16px',
     cursor: 'pointer',
-    fontSize: 14,
-    fontWeight: activeTab === tab ? 600 : 400,
+    fontSize: 13,
+    fontWeight: activeTab === tab ? 700 : 600,
     color: activeTab === tab ? colors.primary : colors.textMuted,
     background: 'transparent',
     border: 'none',
     borderBottom: activeTab === tab ? `2px solid ${colors.primary}` : '2px solid transparent',
     outline: 'none',
-  })
-
-  const bubbleBotStyle: React.CSSProperties = {
-    maxWidth: '80%',
-    padding: '10px 14px',
-    borderRadius: '18px 18px 18px 4px',
-    background: colors.surface,
-    border: `1px solid ${colors.border}`,
-    color: colors.text,
-    fontSize: 14,
-    lineHeight: 1.5,
-    alignSelf: 'flex-start',
-    marginBottom: 8,
-    whiteSpace: 'pre-wrap',
-  }
-
-  const bubbleUserStyle: React.CSSProperties = {
-    maxWidth: '80%',
-    padding: '10px 14px',
-    borderRadius: '18px 18px 4px 18px',
-    background: colors.primary,
-    color: '#fff',
-    fontSize: 14,
-    lineHeight: 1.5,
-    alignSelf: 'flex-end',
-    marginBottom: 8,
-    whiteSpace: 'pre-wrap',
-  }
-
-  const progressBarStyle = (pct: number): React.CSSProperties => ({
-    height: 8,
-    borderRadius: 4,
-    background: `linear-gradient(90deg, ${colors.success} ${pct}%, ${colors.border} ${pct}%)`,
-    marginTop: 6,
-  })
-
-  const flagItemStyle = (severity: string): React.CSSProperties => ({
-    background: severity === 'warning' ? '#fff8e1' : '#e8f5e9',
-    border: `1px solid ${severity === 'warning' ? '#f59e0b55' : '#2d6a4f55'}`,
-    borderRadius: 6,
-    padding: '8px 12px',
-    marginBottom: 6,
-    fontSize: 13,
-    color: severity === 'warning' ? '#b45309' : colors.success,
+    whiteSpace: 'nowrap',
+    fontFamily: typography.body,
   })
 
   const TAB_LABELS: Record<Tab, string> = {
     draft: 'Borrador SIC',
     transcript: 'Relato Original',
-    documents: hasIllegible ? '⚠ Documentos' : 'Documentos',
+    documents: 'Documentos',
     analysis: 'Análisis IA',
   }
 
   return (
     <AdminLayout>
       <div style={s.page}>
-        {/* Case header */}
-        <div style={s.caseHeader}>
-          <div style={s.caseHeaderLeft}>
-            <h2 style={s.caseName}>{caseData.consumer_name}</h2>
-            <div style={s.caseMeta}>
-              <span>Escenario {caseData.case_type} — {SCENARIO_LABEL[caseData.case_type] || caseData.case_type}</span>
-              <span>·</span>
+        <header style={s.header}>
+          <button style={s.back} onClick={() => navigate('/admin')}>← Volver</button>
+
+          <div style={s.headerMain}>
+            <div>
+              <h1 style={s.title}>{caseData.consumer_name}</h1>
               <Badge status={badgeInfo.status} label={badgeInfo.label} />
             </div>
-          </div>
-          <div style={s.caseHeaderRight}>
-            <button style={s.backBtn} onClick={() => navigate('/admin')}>← Volver</button>
-            {isPendingClaim ? (
-              <>
-                <button style={approveBtnStyle(true)} onClick={() => handleClaimDecision('OVERRIDE_CLAIM_VALID')}>
-                  ✓ Reactivar como válido
-                </button>
-                <button style={rejectBtnStyle(true)} onClick={() => handleClaimDecision('CONFIRM_NO_CLAIM')}>
-                  ✗ Confirmar NO CLAIM
-                </button>
-              </>
-            ) : caseData.lawyer_approved ? (
-              <span style={{ fontSize: 13, color: colors.success, fontWeight: 600 }}>✓ Ya aprobado</span>
-            ) : (
-              <>
-                <button style={approveBtnStyle(canAct)} disabled={!canAct} onClick={approveCase}>
-                  ✓ Aprobar y enviar a SIC
-                </button>
-                <button
-                  style={rejectBtnStyle(canAct)}
-                  disabled={!canAct}
-                  onClick={async () => {
-                    await api.post(`/cases/${caseId}/request-docs`, { message: 'El abogado necesita documentos adicionales.' })
-                    showToast('Solicitud de documentos enviada', true)
-                  }}
-                >
-                  Pedir más docs
-                </button>
-              </>
-            )}
-          </div>
-        </div>
 
-        {/* Tab bar */}
-        <div style={s.tabBar}>
+            <div style={s.headerActions}>
+              {isPendingClaim ? (
+                <>
+                  <button style={approveBtnStyle(true)} onClick={() => handleClaimDecision('OVERRIDE_CLAIM_VALID')}>
+                    Reactivar como válido
+                  </button>
+                  <button style={secondaryBtnStyle(true, true)} onClick={() => handleClaimDecision('CONFIRM_NO_CLAIM')}>
+                    Confirmar NO CLAIM
+                  </button>
+                </>
+              ) : caseData.lawyer_approved ? (
+                <span style={{ fontSize: 13, color: colors.success, fontWeight: 700 }}>Caso aprobado</span>
+              ) : (
+                <>
+                  <button style={approveBtnStyle(canAct)} disabled={!canAct} onClick={approveCase}>
+                    Aprobar y enviar SIC
+                  </button>
+                  <button
+                    style={secondaryBtnStyle(canAct)}
+                    disabled={!canAct}
+                    onClick={async () => {
+                      await api.post(`/cases/${caseId}/request-docs`, { message: 'El abogado necesita documentos adicionales.' })
+                      showToast('Solicitud de documentos enviada', true)
+                    }}
+                  >
+                    Pedir más documentos
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div style={s.metaGrid}>
+            <div>
+              <div style={s.metaLabel}>Caso ID</div>
+              <div style={s.metaValue}>{caseData.case_id}</div>
+            </div>
+            <div>
+              <div style={s.metaLabel}>Tipo de reclamación</div>
+              <div style={s.metaValue}>{SCENARIO_LABEL[caseData.case_type] || caseData.case_type}</div>
+            </div>
+            <div>
+              <div style={s.metaLabel}>Fecha de creación</div>
+              <div style={s.metaValue}>{new Date(caseData.created_at).toLocaleDateString('es-CO')}</div>
+            </div>
+            <div>
+              <div style={s.metaLabel}>Proveedor</div>
+              <div style={s.metaValue}>{caseData.provider_name || 'N/D'}</div>
+            </div>
+          </div>
+        </header>
+
+        <div style={s.tabs}>
           {(['draft', 'transcript', 'documents', 'analysis'] as Tab[]).map((tab) => (
             <button key={tab} style={tabStyle(tab)} onClick={() => setActiveTab(tab)}>
               {TAB_LABELS[tab]}
@@ -385,108 +458,151 @@ export default function CaseDetail() {
           ))}
         </div>
 
-        {/* Tab content */}
-        <div style={s.tabContent}>
-          {activeTab === 'draft' && (
-            <>
-              <textarea
-                style={s.draftArea}
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                placeholder="Cargando borrador..."
-              />
-              <button style={s.saveBtn} onClick={saveDraft} disabled={draftLoading}>
-                {draftLoading ? 'Guardando...' : 'Guardar borrador'}
-              </button>
-            </>
-          )}
+        <div style={s.tabPanel}>
+          <div style={s.leftCol}>
+            {activeTab === 'draft' && (
+              <div style={s.card}>
+                <h3 style={s.cardTitle}>Borrador de reclamación</h3>
+                <textarea
+                  style={s.draftArea}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  placeholder="Cargando borrador..."
+                />
+                <button style={s.saveBtn} onClick={saveDraft} disabled={draftLoading}>
+                  {draftLoading ? 'Guardando...' : 'Guardar borrador'}
+                </button>
+              </div>
+            )}
 
-          {activeTab === 'transcript' && (
-            <div style={{ display: 'flex', flexDirection: 'column', maxWidth: 680 }}>
-              {caseData.messages && caseData.messages.length > 0 ? (
-                caseData.messages.map((m, i) => (
-                  <div key={i} style={m.role === 'user' ? bubbleUserStyle : bubbleBotStyle}>
-                    {m.text}
-                  </div>
-                ))
-              ) : caseData.ai_summary && caseData.ai_summary.length > 0 ? (
-                <div style={s.infoCard}>
-                  <div style={s.infoTitle}>Resumen del caso</div>
-                  {caseData.ai_summary.map((item, i) => (
-                    <div key={i} style={s.articleItem}>{item}</div>
-                  ))}
-                </div>
-              ) : (
-                <p style={{ color: colors.textMuted }}>No hay transcripción disponible.</p>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'documents' && (
-            <>
-              {hasIllegible && (
-                <div style={{ background: '#fff8e1', border: `1px solid ${colors.warning}55`, borderRadius: 8, padding: '12px 16px', marginBottom: 16, color: '#b45309', fontSize: 14 }}>
-                  ⚠ Uno o más documentos tienen baja calidad (confianza &lt; 70%). El pipeline está bloqueado hasta que el abogado decida.
-                </div>
-              )}
-              {docs.length === 0 ? (
-                <p style={{ color: colors.textMuted }}>No hay documentos adjuntos.</p>
-              ) : docs.map((doc, i) => {
-                const isOk = doc.confidence >= 0.7
-                return (
-                  <div key={i} style={s.docItem}>
-                    <div>
-                      <div style={{ fontWeight: 500, fontSize: 14 }}>{doc.name}</div>
-                      <div style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>{doc.doc_type}</div>
-                    </div>
-                    <Badge
-                      status={isOk ? 'approved' : 'blocked'}
-                      label={isOk ? `Válido (${Math.round(doc.confidence * 100)}%)` : `Ilegible (${Math.round(doc.confidence * 100)}%)`}
-                    />
-                  </div>
-                )
-              })}
-            </>
-          )}
-
-          {activeTab === 'analysis' && (
-            <>
-              <div style={s.infoCard}>
-                <div style={s.infoTitle}>Clasificación del caso</div>
-                <div style={{ fontSize: 14, color: colors.text, marginBottom: 8 }}>
-                  <strong>Escenario {caseData.case_type}:</strong> {SCENARIO_LABEL[caseData.case_type] || caseData.case_type}
-                </div>
-                {caseData.legal_classification && (
-                  <>
-                    <div style={{ fontSize: 13, color: colors.textMuted }}>
-                      Confianza del clasificador: <strong>{Math.round((caseData.legal_classification.confidence || 0) * 100)}%</strong>
-                    </div>
-                    <div style={progressBarStyle(Math.round((caseData.legal_classification.confidence || 0) * 100))} />
-                  </>
+            {activeTab === 'transcript' && (
+              <div style={s.card}>
+                <h3 style={s.cardTitle}>Relato original</h3>
+                {caseData.messages && caseData.messages.length > 0 ? (
+                  caseData.messages.map((m, i) => (
+                    <div key={i} style={m.role === 'user' ? s.bubbleUser : s.bubbleBot}>{m.text}</div>
+                  ))
+                ) : caseData.ai_summary && caseData.ai_summary.length > 0 ? (
+                  caseData.ai_summary.map((item, i) => <div key={i} style={s.bubbleBot}>{item}</div>)
+                ) : (
+                  <p style={{ color: colors.textMuted }}>No hay transcripción disponible.</p>
                 )}
               </div>
+            )}
 
-              {caseData.legal_classification?.applicable_articles && caseData.legal_classification.applicable_articles.length > 0 && (
-                <div style={s.infoCard}>
-                  <div style={s.infoTitle}>Artículos legales aplicables</div>
-                  {caseData.legal_classification.applicable_articles.map((art, i) => (
-                    <div key={i} style={s.articleItem}>📖 {art}</div>
-                  ))}
-                </div>
-              )}
-
-              {caseData.validation_flags && caseData.validation_flags.length > 0 && (
-                <div style={s.infoCard}>
-                  <div style={s.infoTitle}>Validación del borrador</div>
-                  {caseData.validation_flags.map((f, i) => (
-                    <div key={i} style={flagItemStyle(f.severity)}>
-                      <strong>{f.field}</strong>: {f.message}
+            {activeTab === 'documents' && (
+              <div style={s.card}>
+                <h3 style={s.cardTitle}>Documentos adjuntos</h3>
+                {hasIllegible && (
+                  <div style={{ ...s.articlePanel, borderColor: `${colors.warning}55`, color: '#8A5A15' }}>
+                    Uno o más documentos tienen baja calidad (confianza &lt; 70%).
+                  </div>
+                )}
+                {docs.length === 0 ? (
+                  <p style={{ color: colors.textMuted }}>No hay documentos adjuntos.</p>
+                ) : docs.map((doc, i) => {
+                  const ok = doc.confidence >= 0.7
+                  return (
+                    <div key={i} style={s.docRow}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>{doc.name}</div>
+                        <div style={{ fontSize: 12, color: colors.textMuted }}>{doc.doc_type}</div>
+                      </div>
+                      <Badge status={ok ? 'approved' : 'blocked'} label={`${Math.round(doc.confidence * 100)}%`} />
                     </div>
-                  ))}
+                  )
+                })}
+              </div>
+            )}
+
+            {activeTab === 'analysis' && (
+              <>
+                <div style={s.card}>
+                  <h3 style={s.cardTitle}>Clasificación legal</h3>
+                  <div style={{ fontSize: 13, color: colors.text, marginBottom: 8 }}>
+                    Escenario: <strong>{caseData.case_type}</strong>
+                  </div>
+                  <div style={{ fontSize: 13, color: colors.textMuted }}>
+                    Confianza global: <strong>{Math.round((caseData.legal_classification?.confidence || 0) * 100)}%</strong>
+                  </div>
                 </div>
-              )}
-            </>
-          )}
+
+                {(caseData.legal_classification?.article_analysis || []).length > 0 && (
+                  <div style={s.card}>
+                    <h3 style={s.cardTitle}>Análisis por artículo</h3>
+                    {articleAnalysis.map((a) => {
+                      const active = expandedArticle === a.article_id
+                      return (
+                        <div key={a.article_id}>
+                          <button
+                            style={s.articleBtn}
+                            onClick={() => setExpandedArticle(active ? null : a.article_id)}
+                          >
+                            {a.article_id} · Confianza {Math.round((a.confidence_by_article || 0) * 100)}%
+                          </button>
+                          {active && (
+                            <div style={s.articlePanel}>
+                              <div><strong>Extracto relevante:</strong> {a.relevant_excerpt || 'Sin extracto.'}</div>
+                              <div style={{ marginTop: 8 }}><strong>Razonamiento:</strong> {a.reasoning_summary || 'Sin resumen.'}</div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {caseData.validation_flags && caseData.validation_flags.length > 0 && (
+                  <div style={s.card}>
+                    <h3 style={s.cardTitle}>Validaciones</h3>
+                    {caseData.validation_flags.map((f, i) => (
+                      <div key={i} style={s.articlePanel}>
+                        <strong>{f.field}</strong>: {f.message}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <aside style={s.rightCol}>
+            <div style={s.card}>
+              <h3 style={s.cardTitle}>Información del proveedor</h3>
+              <div style={{ fontSize: 13, color: colors.textMuted, lineHeight: 1.7 }}>
+                <div><strong>Razón social:</strong> {caseData.provider_name || 'N/D'}</div>
+                <div><strong>NIT:</strong> {caseData.provider_nit || 'N/D'}</div>
+                <div><strong>Dirección:</strong> {caseData.provider_address || 'N/D'}</div>
+              </div>
+            </div>
+
+            <div style={s.card}>
+              <h3 style={s.cardTitle}>Progreso del caso</h3>
+              <div style={{ fontSize: 13, color: colors.textMuted }}>
+                Completitud: <strong style={{ color: colors.primary }}>{completeness}%</strong>
+              </div>
+              <div style={s.progressBar} />
+              <div style={{ marginTop: 12 }}>
+                <div style={s.timelineItem}>
+                  <div style={s.timelineTime}>Actual</div>
+                  <div style={s.timelineTitle}>{badgeInfo.label}</div>
+                </div>
+                <div style={s.timelineItem}>
+                  <div style={s.timelineTime}>Creación</div>
+                  <div style={s.timelineTitle}>{new Date(caseData.created_at).toLocaleDateString('es-CO')}</div>
+                </div>
+              </div>
+            </div>
+
+            <div style={s.card}>
+              <h3 style={s.cardTitle}>Indicadores</h3>
+              <div style={{ fontSize: 13, color: colors.textMuted, lineHeight: 1.7 }}>
+                <div>Prioridad: <strong>{caseData.priority}</strong></div>
+                <div>Escenario: <strong>{caseData.case_type}</strong></div>
+                <div>Confianza legal: <strong>{Math.round((caseData.legal_classification?.confidence || 0) * 100)}%</strong></div>
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
 

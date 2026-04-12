@@ -1,19 +1,30 @@
 // frontend/src/styles/tokens.ts
 export const colors = {
-  primary: '#1a3a5c',
-  primaryLight: '#2d5986',
-  primaryDark: '#111e2d',
-  success: '#2d6a4f',
-  danger: '#e63946',
-  warning: '#f59e0b',
-  bg: '#f4f6f8',
-  surface: '#ffffff',
-  text: '#212529',
-  textMuted: '#6c757d',
-  border: '#dee2e6',
+  primary: '#1F4E79',
+  primaryLight: '#2D6A9F',
+  primaryDark: '#163754',
+  accent: '#4F86C6',
+  success: '#2E7D32',
+  danger: '#B42318',
+  warning: '#B7791F',
+  bg: '#F5F7FA',
+  surface: '#FFFFFF',
+  text: '#1F2937',
+  textMuted: '#6B7280',
+  border: '#D6DDE7',
+  neutral50: '#F5F7FA',
+  neutral100: '#E7ECF2',
+  neutral200: '#D6DDE7',
+  neutral600: '#6B7280',
+  neutral800: '#374151',
+}
+
+export const typography = {
+  body: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  display: "'DM Serif Display', Georgia, serif",
 }
 
 export const shadows = {
-  card: '0 2px 12px rgba(0,0,0,0.08)',
-  modal: '0 8px 32px rgba(0,0,0,0.16)',
+  card: '0 2px 12px rgba(22,55,84,0.08)',
+  modal: '0 8px 32px rgba(22,55,84,0.16)',
 }
