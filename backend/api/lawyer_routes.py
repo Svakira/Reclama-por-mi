@@ -13,6 +13,8 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from backend.auth.jwt_handler import TokenData, require_lawyer_token
 from backend.db.firestore_client import get_document, update_document
+from backend.api.notify_routes import send_notification
+from backend.models.case_models import NotifySendRequest
 from backend.models.case_models import LawyerClaimDecisionRequest, FilingOptionRequest
 
 router = APIRouter()
@@ -97,6 +99,8 @@ async def lawyer_claim_decision(
             "lawyer_claim_notes": body.notes,
             "updated_at": now,
         })
+        if case.get("whatsapp_number"):
+            await send_notification(NotifySendRequest(case_id=case_id, event="NO_CLAIM_CONFIRMED"))
         # Trigger rejection document generation (async, background)
         return {
             "case_id": case_id,
@@ -115,6 +119,8 @@ async def lawyer_claim_decision(
             "lawyer_claim_notes": body.notes,
             "updated_at": now,
         })
+        if case.get("whatsapp_number"):
+            await send_notification(NotifySendRequest(case_id=case_id, event="CLAIM_REACTIVATED"))
         return {
             "case_id": case_id,
             "status": "PENDING_REVIEW",

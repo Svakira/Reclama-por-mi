@@ -13,12 +13,13 @@ export default function AdminLayout({ children, pendingCount = 0 }: AdminLayoutP
     display: 'flex',
     height: '100vh',
     background: colors.bg,
-    overflow: 'hidden',
+    overflow: 'hidden'
   }
   const main: React.CSSProperties = {
     flex: 1,
     overflowY: 'auto',
     background: colors.bg,
+    marginLeft: 0,
   }
 
   return (

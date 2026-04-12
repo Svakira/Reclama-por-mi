@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Optional
 
 from backend.agents.groq_client import chat_complete
+from backend.utils.money_format import format_cop_amount
 
 _KG_PATH = Path(__file__).parent.parent / "kg" / "legal_graph.json"
 _kg_cache: dict = {}
@@ -79,6 +80,76 @@ con TODOS los campos del formulario SIC:
 Usa lenguaje formal pero claro. Cita SOLO artículos que aparezcan en la lista de arriba.
 Devuelve SOLO el texto del borrador, sin explicaciones adicionales."""
 
+
+def _safe_int(value: object) -> int:
+    if value is None:
+        return 0
+    digits = "".join(ch for ch in str(value) if ch.isdigit())
+    return int(digits) if digits else 0
+
+
+def _build_chronology(narrative: str, document_fields: dict) -> str:
+    cleaned = " ".join((narrative or "").split())
+    purchase_date = document_fields.get("fecha") or "fecha no determinada"
+    provider = document_fields.get("nombre_proveedor") or "proveedor no identificado"
+    product = document_fields.get("producto_servicio") or "producto o servicio no identificado"
+
+    steps = [
+        f"1. En fecha {purchase_date}, la consumidora celebro una relacion de consumo con {provider} respecto de {product}.",
+        f"2. Segun el relato entregado por la consumidora, {cleaned or 'se presentaron hechos que afectan sus derechos como consumidora.'}",
+        "3. La consumidora adelanto gestion directa ante el proveedor y no obtuvo solucion efectiva.",
+        "4. Ante la persistencia del conflicto, solicita intervencion jurisdiccional de la SIC.",
+    ]
+    return "\n".join(steps)
+
+
+def _build_quantia_by_concept(document_fields: dict) -> str:
+    amount_paid = _safe_int(document_fields.get("monto"))
+    amount_text = format_cop_amount(amount_paid)
+    return (
+        f"- Valor pagado del bien o servicio: {amount_text}.\n"
+        "- Otros perjuicios demostrables: se determinaran en etapa probatoria si aplica.\n"
+        f"- Cuantia total estimada inicial: {amount_text}."
+    )
+
+
+def _build_legal_excerpts(classification: dict) -> str:
+    kg = _load_kg()
+    by_id = {a.get("id"): a for a in kg.get("articles", [])}
+    article_ids = classification.get("applicable_articles") or []
+    if not article_ids:
+        return "- Sin articulos identificados automaticamente. Requiere revision juridica manual."
+
+    lines = []
+    for article_id in article_ids:
+        article = by_id.get(article_id) or {}
+        text = " ".join(str(article.get("text", "")).split())[:280]
+        title = article.get("title", "Articulo aplicable")
+        lines.append(f"- {article_id} ({title}): {text}")
+    return "\n".join(lines)
+
+
+def _compose_structured_draft(
+    llm_draft: str,
+    narrative: str,
+    document_fields: dict,
+    classification: dict,
+) -> str:
+    chronology = _build_chronology(narrative, document_fields)
+    quantia = _build_quantia_by_concept(document_fields)
+    legal_excerpts = _build_legal_excerpts(classification)
+
+    return (
+        "HECHOS (CRONOLOGIA AMPLIA)\n"
+        f"{chronology}\n\n"
+        "CUANTIA POR CONCEPTO\n"
+        f"{quantia}\n\n"
+        "FUNDAMENTOS DE DERECHO CON EXTRACTOS RELEVANTES\n"
+        f"{legal_excerpts}\n\n"
+        "BORRADOR FORMAL PROPUESTO\n"
+        f"{llm_draft.strip()}"
+    )
+
 SYSTEM_PROMPT_SIMPLE = """Eres JusticIA, un asistente legal amable.
 Explícale a la consumidora Rosa, en español colombiano simple y cálido,
 qué dice su reclamación y qué pasará ahora.
@@ -109,7 +180,8 @@ def generate_formal_draft(
         {"role": "user", "content": context},
     ]
 
-    return chat_complete(messages)
+    base_draft = chat_complete(messages)
+    return _compose_structured_draft(base_draft, narrative, document_fields, classification)
 
 
 def generate_simple_explanation(formal_draft: str, consumer_name: str) -> str:

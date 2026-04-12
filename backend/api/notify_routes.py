@@ -27,6 +27,8 @@ EVENT_MESSAGES = {
     "DRAFT_APPROVED": "Hola {name}, tu reclamación ante la SIC fue aprobada por el abogado. Caso *{case_id}*.",
     "SUBMITTED_TO_SIC": "Hola {name}, tu reclamación fue enviada a la SIC. Caso *{case_id}*. Guarda este número.",
     "OPTION_2_PDF_READY": "Hola {name}, tu reclamación está lista para presentar. Descarga el PDF en el enlace adjunto. Caso *{case_id}*.",
+    "CLAIM_REACTIVATED": "Hola {name}, tu caso *{case_id}* fue reactivado por el abogado y continuará su trámite.",
+    "NO_CLAIM_CONFIRMED": "Hola {name}, tras revisión jurídica, tu caso *{case_id}* fue clasificado como no reclamable. Te compartiremos el documento de cierre.",
 }
 
 

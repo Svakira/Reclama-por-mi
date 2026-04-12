@@ -20,6 +20,40 @@ async def list_cases(token: LawyerDep):
     return cases
 
 
+@router.get("/cases/documents/index")
+async def list_document_index(token: LawyerDep):
+    """Read-only flattened index of uploaded case documents for admin explorer."""
+    cases = await list_collection("cases")
+    rows = []
+
+    for case in cases:
+        case_id = case.get("case_id", "")
+        consumer_name = case.get("consumer_name", "")
+        default_confidence = float(case.get("document_confidence") or 0)
+        documents = case.get("documents") or []
+
+        if isinstance(documents, list) and documents:
+            for doc in documents:
+                rows.append({
+                    "case_id": case_id,
+                    "consumer_name": consumer_name,
+                    "filename": doc.get("filename") or doc.get("name") or "documento",
+                    "doc_type": doc.get("doc_type") or "soporte",
+                    "confidence": float(doc.get("confidence") or default_confidence),
+                })
+            continue
+
+        rows.append({
+            "case_id": case_id,
+            "consumer_name": consumer_name,
+            "filename": case.get("document_filename") or "documento_principal",
+            "doc_type": case.get("document_type") or "soporte",
+            "confidence": default_confidence,
+        })
+
+    return rows
+
+
 @router.get("/cases/{case_id}")
 async def get_case(case_id: str, token: LawyerDep):
     case = await get_document("cases", case_id)

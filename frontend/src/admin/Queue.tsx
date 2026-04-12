@@ -42,6 +42,7 @@ interface Case {
 export default function Queue() {
   const [cases, setCases] = useState<Case[]>([])
   const [loading, setLoading] = useState(true)
+  const [query, setQuery] = useState('')
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -64,6 +65,12 @@ export default function Queue() {
     ['PENDING_REVIEW', 'PENDING_CLAIM_DECISION', 'LAWYER_REVIEWING'].includes(c.status)
   ).length
 
+  const filteredCases = cases.filter((c) => {
+    const q = query.trim().toLowerCase()
+    if (!q) return true
+    return [c.case_id, c.consumer_name, c.status, c.case_type].join(' ').toLowerCase().includes(q)
+  })
+
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
 
@@ -71,15 +78,30 @@ export default function Queue() {
     page: { padding: '32px 32px' },
     header: {
       display: 'flex',
-      alignItems: 'center',
-      gap: 12,
-      marginBottom: 24,
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: 20,
     },
     title: {
       fontSize: 22,
       fontWeight: 700,
       color: colors.text,
       margin: 0,
+    },
+    subtitle: {
+      marginTop: 6,
+      color: colors.textMuted,
+      fontSize: 14,
+    },
+    assignBtn: {
+      padding: '10px 20px',
+      background: colors.primary,
+      color: '#fff',
+      border: 'none',
+      borderRadius: 8,
+      fontWeight: 600,
+      cursor: 'pointer',
+      fontSize: 13,
     },
     countBadge: {
       background: colors.primary,
@@ -95,6 +117,24 @@ export default function Queue() {
       borderRadius: 10,
       boxShadow: shadows.card,
       overflow: 'hidden',
+    },
+    filters: {
+      display: 'flex',
+      gap: 12,
+      marginBottom: 14,
+      flexWrap: 'wrap',
+    },
+    searchInput: {
+      minWidth: 360,
+      maxWidth: 480,
+      width: '100%',
+      border: `1px solid ${colors.border}`,
+      borderRadius: 8,
+      padding: '10px 12px',
+      fontSize: 13,
+      outline: 'none',
+      color: colors.text,
+      background: colors.surface,
     },
     th: {
       textAlign: 'left' as const,
@@ -130,7 +170,20 @@ export default function Queue() {
     <AdminLayout pendingCount={pendingCount}>
       <div style={s.page}>
         <div style={s.header}>
-          <h1 style={s.title}>Cola de revisión</h1>
+          <div>
+            <h1 style={s.title}>Cola de revisión</h1>
+            <p style={s.subtitle}>Casos pendientes de evaluación legal</p>
+          </div>
+          <button style={s.assignBtn}>Asignar caso</button>
+        </div>
+
+        <div style={s.filters}>
+          <input
+            style={s.searchInput}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar por caso, consumidor, estado o escenario"
+          />
           {pendingCount > 0 && <span style={s.countBadge}>{pendingCount} pendientes</span>}
         </div>
 
@@ -149,10 +202,10 @@ export default function Queue() {
             <tbody>
               {loading ? (
                 <tr><td colSpan={6} style={s.empty}>Cargando...</td></tr>
-              ) : cases.length === 0 ? (
+              ) : filteredCases.length === 0 ? (
                 <tr><td colSpan={6} style={s.empty}>No hay casos en la cola</td></tr>
               ) : (
-                cases.map((c) => {
+                filteredCases.map((c) => {
                   const badge = statusToBadge(c.status)
                   return (
                     <tr
@@ -178,7 +231,7 @@ export default function Queue() {
                           style={s.reviewBtn}
                           onClick={() => navigate(`/admin/cases/${c.case_id}`)}
                         >
-                          Revisar →
+                          Revisar
                         </button>
                       </td>
                     </tr>

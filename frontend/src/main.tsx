@@ -6,7 +6,9 @@ import StatusView from './app/StatusView'
 import Login from './admin/Login'
 import Queue from './admin/Queue'
 import CaseDetail from './admin/CaseDetail'
+import DataExplorer from './admin/DataExplorer'
 import PrivateRoute from './admin/PrivateRoute'
+import './styles/global.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -19,6 +21,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         {/* Lawyer dashboard */}
         <Route path="/admin/login" element={<Login />} />
         <Route path="/admin" element={<PrivateRoute><Queue /></PrivateRoute>} />
+        <Route path="/admin/data" element={<PrivateRoute><DataExplorer /></PrivateRoute>} />
         <Route path="/admin/cases/:caseId" element={<PrivateRoute><CaseDetail /></PrivateRoute>} />
 
         {/* Default redirect */}
