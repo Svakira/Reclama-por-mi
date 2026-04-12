@@ -41,8 +41,17 @@ async def health():
     return {"status": "ok"}
 
 
-# Serve React frontend only when the full build output exists.
 _frontend_dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 _frontend_index = _frontend_dist / "index.html"
+
 if _frontend_dist.is_dir() and _frontend_index.is_file():
-    app.mount("/", StaticFiles(directory=str(_frontend_dist), html=True), name="frontend")
+    from fastapi.responses import FileResponse
+
+    app.mount("/assets", StaticFiles(directory=str(_frontend_dist / "assets")), name="static-assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        file_path = _frontend_dist / full_path
+        if full_path and file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(_frontend_index)
