@@ -20,7 +20,7 @@ Importante: **no existe envio automatico a la SIC** en la version actual. El pro
 
 ## Arquitectura actual (funcional)
 
-La arquitectura real en este repositorio es:
+La arquitectura en este repositorio es:
 
 - Backend: FastAPI (pipeline + panel abogado)
 - LLM/ASR/Vision: Groq
@@ -38,7 +38,7 @@ No se usa Neo4j/LlamaIndex en runtime de esta version.
 
 ## Pipeline implementado
 
-Pipeline backend real:
+Pipeline backend:
 
 1. IntakeInterviewer
 2. DocumentParser
@@ -49,7 +49,6 @@ Pipeline backend real:
 7. VerificationGate (faltantes y consistencia)
 8. CasePackager
 9. LawyerApprovalGate
-10. Entrega por WhatsApp (PDF + enlace SIC)
 
 Referencias principales:
 
@@ -85,17 +84,6 @@ Referencias:
 
 ---
 
-## Entrega final a Rosa (WhatsApp)
-
-Cuando el abogado aprueba un caso:
-
-- se marca aprobado
-- se dispara notificacion WhatsApp por Twilio
-- se envia mensaje con:
-  - enlace de descarga del PDF final
-  - enlace de recursos explicativos SIC
-- si Twilio esta en modo mock, se deja traza en logs
-
 Referencias:
 
 - [backend/api/cases_routes.py](backend/api/cases_routes.py)
@@ -125,22 +113,6 @@ Referencias:
 - [backend/api/cases_routes.py](backend/api/cases_routes.py)
 - [backend/db/firestore_client.py](backend/db/firestore_client.py)
 
----
-
-## Estado del challenge (version actual)
-
-Fortalezas actuales:
-
-- flujo end-to-end estable con backend tests
-- borrador formal + validaciones deterministicas
-- hard gates juridicos y operativos
-- entrega final por WhatsApp al usuario
-
-Gaps conocidos para acercarse a propuesta "ganadora":
-
-- guia procedimental SIC paso a paso todavia no sale como output estructurado final
-- falta explotar mas UI de auditoria en admin
-- integraciones externas avanzadas (si se requieren) deben implementarse como fase siguiente
 
 ---
 
