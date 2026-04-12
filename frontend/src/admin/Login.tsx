@@ -1,51 +1,8 @@
+// frontend/src/admin/Login.tsx
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/client'
-
-const s: Record<string, React.CSSProperties> = {
-  page: {
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, #0f172a, #1e293b)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  card: {
-    background: '#1e293b',
-    border: '1px solid #334155',
-    borderRadius: 16,
-    padding: 32,
-    width: '100%',
-    maxWidth: 360,
-  },
-  title: { fontSize: 24, fontWeight: 800, color: '#38bdf8', marginBottom: 4 },
-  sub: { fontSize: 13, color: '#64748b', marginBottom: 24 },
-  label: { fontSize: 13, color: '#94a3b8', marginBottom: 6, display: 'block' },
-  input: {
-    width: '100%',
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: 8,
-    padding: '10px 14px',
-    color: '#f1f5f9',
-    fontSize: 14,
-    marginBottom: 16,
-    outline: 'none',
-  },
-  btn: {
-    width: '100%',
-    background: '#0ea5e9',
-    border: 'none',
-    borderRadius: 8,
-    padding: '12px 0',
-    color: '#fff',
-    fontWeight: 700,
-    fontSize: 15,
-    cursor: 'pointer',
-  },
-  error: { color: '#f87171', fontSize: 13, marginTop: 10 },
-}
+import { colors, shadows } from '../styles/tokens'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -69,11 +26,83 @@ export default function Login() {
     setLoading(false)
   }
 
+  const s: Record<string, React.CSSProperties> = {
+    page: {
+      minHeight: '100vh',
+      background: colors.bg,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 20,
+    },
+    card: {
+      background: colors.surface,
+      border: `1px solid ${colors.border}`,
+      borderRadius: 12,
+      padding: 40,
+      width: '100%',
+      maxWidth: 400,
+      boxShadow: shadows.modal,
+    },
+    logoWrap: {
+      textAlign: 'center',
+      marginBottom: 28,
+    },
+    logoText: {
+      fontSize: 26,
+      fontWeight: 700,
+      color: colors.primary,
+    },
+    logoSub: {
+      fontSize: 14,
+      color: colors.textMuted,
+      marginTop: 4,
+    },
+    label: {
+      fontSize: 13,
+      fontWeight: 600,
+      color: colors.text,
+      marginBottom: 6,
+      display: 'block',
+    },
+    input: {
+      width: '100%',
+      background: colors.surface,
+      border: `1px solid ${colors.border}`,
+      borderRadius: 6,
+      padding: '10px 14px',
+      color: colors.text,
+      fontSize: 14,
+      marginBottom: 16,
+      outline: 'none',
+      boxSizing: 'border-box',
+    },
+    btn: {
+      width: '100%',
+      background: colors.primary,
+      border: 'none',
+      borderRadius: 6,
+      padding: '12px 0',
+      color: '#fff',
+      fontWeight: 700,
+      fontSize: 15,
+      cursor: 'pointer',
+    },
+    error: {
+      color: colors.danger,
+      fontSize: 13,
+      marginTop: 10,
+      textAlign: 'center',
+    },
+  }
+
   return (
     <div style={s.page}>
       <div style={s.card}>
-        <div style={s.title}>JusticIA</div>
-        <div style={s.sub}>Panel del Abogado — Clínica Jurídica ICESI</div>
+        <div style={s.logoWrap}>
+          <div style={s.logoText}>⚖️ JusticIA</div>
+          <div style={s.logoSub}>Panel del Abogado — Clínica Jurídica ICESI</div>
+        </div>
         <form onSubmit={handleLogin}>
           <label style={s.label}>Correo electrónico</label>
           <input
@@ -93,7 +122,7 @@ export default function Login() {
             required
           />
           <button style={s.btn} type="submit" disabled={loading}>
-            {loading ? 'Ingresando...' : 'Ingresar'}
+            {loading ? 'Ingresando...' : 'Iniciar sesión'}
           </button>
           {error && <div style={s.error}>{error}</div>}
         </form>

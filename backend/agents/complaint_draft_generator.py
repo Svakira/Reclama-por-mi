@@ -3,14 +3,55 @@
 Stage 6: ComplaintDraftGenerator
 - OUTPUT A: Plain Spanish (~200 words) for Rosa to understand
 - OUTPUT B: Formal SIC draft with all 14 fields filled
+Uses legal_graph.json for article texts and claim templates.
 """
 import json
 import re
+from pathlib import Path
 from typing import Optional
 
 from backend.agents.groq_client import chat_complete
 
-SYSTEM_PROMPT_FORMAL = """Eres un redactor jurídico experto en protección al consumidor colombiano.
+_KG_PATH = Path(__file__).parent.parent / "kg" / "legal_graph.json"
+_kg_cache: dict = {}
+
+
+def _load_kg() -> dict:
+    global _kg_cache
+    if not _kg_cache:
+        try:
+            _kg_cache = json.loads(_KG_PATH.read_text(encoding="utf-8"))
+        except Exception:
+            _kg_cache = {}
+    return _kg_cache
+
+
+def _get_templates_for_scenario(scenario: str) -> str:
+    """Return relevant claim templates as text for the LLM."""
+    kg = _load_kg()
+    templates = [t for t in kg.get("claim_templates", []) if t.get("scenario") == scenario]
+    if not templates:
+        return ""
+    lines = ["PLANTILLAS DE PRETENSIONES DISPONIBLES (usar y adaptar con datos reales):"]
+    for t in templates:
+        lines.append(f"\n[{t['id']} — {t['remedy']}]:\n{t['template']}")
+    return "\n".join(lines)
+
+
+def _get_articles_text_for_scenario(scenario: str) -> str:
+    """Return article texts relevant to scenario for the LLM."""
+    kg = _load_kg()
+    articles = [a for a in kg.get("articles", []) if scenario in a.get("scenarios", [])]
+    lines = ["ARTÍCULOS APLICABLES (texto legal verificado):"]
+    for a in articles:
+        lines.append(f"\nArt. {a['article_number']} {a['title']} [{a['id']}]:\n{a['text'][:500]}")
+    return "\n".join(lines)
+
+
+def _build_formal_prompt(scenario: str) -> str:
+    articles = _get_articles_text_for_scenario(scenario)
+    templates = _get_templates_for_scenario(scenario)
+    return f"""Eres un redactor jurídico experto en protección al consumidor colombiano.
 Redactas reclamaciones formales ante la SIC (Superintendencia de Industria y Comercio).
 
 Con base en los hechos, documentos y clasificación legal, genera el borrador formal
@@ -28,12 +69,14 @@ con TODOS los campos del formulario SIC:
 10. Pretensión principal (clara, separada, concreta, precisa)
 11. Pretensión subsidiaria si aplica
 12. Estimación económica del monto si hay pretensión económica
-13. Fundamentos de derecho (artículos citados)
+13. Fundamentos de derecho (artículos citados — usar SOLO los artículos verificados abajo)
 14. Relación de pruebas
 
-Usa lenguaje formal pero claro. Cita SOLO artículos que existan en la Ley 1480 de 2011
-o Ley 1341 de 2009. No inventes artículos.
+{articles}
 
+{templates}
+
+Usa lenguaje formal pero claro. Cita SOLO artículos que aparezcan en la lista de arriba.
 Devuelve SOLO el texto del borrador, sin explicaciones adicionales."""
 
 SYSTEM_PROMPT_SIMPLE = """Eres JusticIA, un asistente legal amable.
@@ -50,7 +93,10 @@ def generate_formal_draft(
     classification: dict,
     case_data: dict,
 ) -> str:
-    """Generate the formal SIC complaint draft."""
+    """Generate the formal SIC complaint draft using KG articles and templates."""
+    scenario = classification.get("scenario", "A")
+    system_prompt = _build_formal_prompt(scenario)
+
     context = (
         f"RELATO DE LA CONSUMIDORA: {narrative}\n\n"
         f"DATOS EXTRAÍDOS DE DOCUMENTOS: {json.dumps(document_fields, ensure_ascii=False)}\n\n"
@@ -59,7 +105,7 @@ def generate_formal_draft(
     )
 
     messages = [
-        {"role": "system", "content": SYSTEM_PROMPT_FORMAL},
+        {"role": "system", "content": system_prompt},
         {"role": "user", "content": context},
     ]
 

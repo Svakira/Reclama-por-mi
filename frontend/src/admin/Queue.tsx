@@ -1,6 +1,10 @@
+// frontend/src/admin/Queue.tsx
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/client'
+import AdminLayout from './AdminLayout'
+import Badge from '../components/Badge'
+import { colors, shadows } from '../styles/tokens'
 
 const SCENARIO_LABEL: Record<string, string> = {
   A: 'Producto defectuoso',
@@ -9,88 +13,21 @@ const SCENARIO_LABEL: Record<string, string> = {
   UNKNOWN: 'Sin clasificar',
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  PENDING_REVIEW: '#fbbf24',
-  LAWYER_REVIEWING: '#60a5fa',
-  APPROVED: '#34d399',
-  SUBMITTED_TO_SIC: '#86efac',
-  PENDING_CLAIM_DECISION: '#f87171',
-  ILLEGIBLE_DOCUMENT_BLOCKED: '#fb923c',
-  DOCS_REQUESTED: '#a78bfa',
-  CLOSED: '#64748b',
+type BadgeStatus = 'pending' | 'active' | 'approved' | 'rejected' | 'ready' | 'blocked' | 'info'
+
+function statusToBadge(status: string): { status: BadgeStatus; label: string } {
+  const map: Record<string, { status: BadgeStatus; label: string }> = {
+    PENDING_REVIEW: { status: 'pending', label: 'Pendiente revisión' },
+    LAWYER_REVIEWING: { status: 'active', label: 'En revisión' },
+    APPROVED: { status: 'approved', label: 'Aprobado' },
+    SUBMITTED_TO_SIC: { status: 'ready', label: 'Enviado SIC' },
+    PENDING_CLAIM_DECISION: { status: 'blocked', label: 'Decisión requerida' },
+    ILLEGIBLE_DOCUMENT_BLOCKED: { status: 'blocked', label: 'Doc. ilegible' },
+    DOCS_REQUESTED: { status: 'info', label: 'Docs. solicitados' },
+    CLOSED: { status: 'info', label: 'Cerrado' },
+  }
+  return map[status] || { status: 'info', label: status.replace(/_/g, ' ') }
 }
-
-const s: Record<string, React.CSSProperties> = {
-  page: { minHeight: '100vh', background: '#0f172a', padding: '24px 20px' },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    maxWidth: 900,
-    margin: '0 auto 24px',
-  },
-  title: { fontSize: 22, fontWeight: 800, color: '#38bdf8' },
-  logout: {
-    background: 'transparent',
-    border: '1px solid #334155',
-    borderRadius: 8,
-    padding: '6px 14px',
-    color: '#94a3b8',
-    cursor: 'pointer',
-    fontSize: 13,
-  },
-  table: {
-    width: '100%',
-    maxWidth: 900,
-    margin: '0 auto',
-    background: '#1e293b',
-    borderRadius: 12,
-    border: '1px solid #334155',
-    overflow: 'hidden',
-  },
-  th: {
-    textAlign: 'left' as const,
-    padding: '12px 16px',
-    fontSize: 12,
-    fontWeight: 600,
-    color: '#64748b',
-    textTransform: 'uppercase' as const,
-    borderBottom: '1px solid #334155',
-    background: '#0f172a',
-  },
-  td: {
-    padding: '14px 16px',
-    fontSize: 14,
-    color: '#e2e8f0',
-    borderBottom: '1px solid #1e293b',
-    cursor: 'pointer',
-  },
-  empty: { textAlign: 'center' as const, color: '#64748b', padding: 40 },
-}
-
-const badgeStyle = (color: string): React.CSSProperties => ({
-  display: 'inline-block',
-  background: color + '22',
-  color,
-  border: `1px solid ${color}44`,
-  borderRadius: 6,
-  padding: '2px 8px',
-  fontSize: 11,
-  fontWeight: 600,
-})
-
-const priorityStyle = (p: number): React.CSSProperties => ({
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: 24,
-  height: 24,
-  borderRadius: '50%',
-  background: p >= 4 ? '#f87171' : p >= 3 ? '#fbbf24' : '#334155',
-  color: '#fff',
-  fontSize: 12,
-  fontWeight: 700,
-})
 
 interface Case {
   case_id: string
@@ -106,7 +43,6 @@ export default function Queue() {
   const [cases, setCases] = useState<Case[]>([])
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
-  const lawyerName = localStorage.getItem('justicia_lawyer_name') || 'Abogado'
 
   useEffect(() => {
     loadCases()
@@ -124,78 +60,135 @@ export default function Queue() {
     setLoading(false)
   }
 
-  function logout() {
-    localStorage.removeItem('justicia_token')
-    navigate('/admin/login')
-  }
+  const pendingCount = cases.filter((c) =>
+    ['PENDING_REVIEW', 'PENDING_CLAIM_DECISION', 'LAWYER_REVIEWING'].includes(c.status)
+  ).length
 
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
 
-  return (
-    <div style={s.page}>
-      <div style={s.header}>
-        <div>
-          <div style={s.title}>JusticIA — Panel del Abogado</div>
-          <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>Bienvenido, {lawyerName}</div>
-        </div>
-        <button style={s.logout} onClick={logout}>Cerrar sesión</button>
-      </div>
+  const s: Record<string, React.CSSProperties> = {
+    page: { padding: '32px 32px' },
+    header: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      marginBottom: 24,
+    },
+    title: {
+      fontSize: 22,
+      fontWeight: 700,
+      color: colors.text,
+      margin: 0,
+    },
+    countBadge: {
+      background: colors.primary,
+      color: '#fff',
+      borderRadius: 12,
+      padding: '2px 10px',
+      fontSize: 13,
+      fontWeight: 700,
+    },
+    card: {
+      background: colors.surface,
+      border: `1px solid ${colors.border}`,
+      borderRadius: 10,
+      boxShadow: shadows.card,
+      overflow: 'hidden',
+    },
+    th: {
+      textAlign: 'left' as const,
+      padding: '12px 16px',
+      fontSize: 12,
+      fontWeight: 600,
+      color: colors.textMuted,
+      textTransform: 'uppercase' as const,
+      letterSpacing: '0.05em',
+      borderBottom: `1px solid ${colors.border}`,
+      background: colors.bg,
+    },
+    td: {
+      padding: '14px 16px',
+      fontSize: 14,
+      color: colors.text,
+      borderBottom: `1px solid ${colors.border}`,
+    },
+    reviewBtn: {
+      background: 'transparent',
+      border: `1px solid ${colors.primary}`,
+      borderRadius: 6,
+      padding: '6px 14px',
+      color: colors.primary,
+      cursor: 'pointer',
+      fontSize: 13,
+      fontWeight: 600,
+    },
+    empty: { textAlign: 'center' as const, color: colors.textMuted, padding: 48 },
+  }
 
-      <div style={s.table}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th style={s.th}>P</th>
-              <th style={s.th}>ID del caso</th>
-              <th style={s.th}>Consumidor</th>
-              <th style={s.th}>Tipo</th>
-              <th style={s.th}>Estado</th>
-              <th style={s.th}>Alertas</th>
-              <th style={s.th}>Fecha</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={7} style={s.empty}>Cargando...</td></tr>
-            ) : cases.length === 0 ? (
-              <tr><td colSpan={7} style={s.empty}>No hay casos pendientes</td></tr>
-            ) : (
-              cases.map((c) => (
-                <tr
-                  key={c.case_id}
-                  onClick={() => navigate(`/admin/cases/${c.case_id}`)}
-                  style={{ cursor: 'pointer' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = '#263045')}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                >
-                  <td style={s.td}>
-                  <span style={priorityStyle(c.priority)}>{c.priority}</span>
-                  </td>
-                  <td style={{ ...s.td, fontFamily: 'monospace', fontSize: 12, color: '#94a3b8' }}>{c.case_id}</td>
-                  <td style={s.td}>{c.consumer_name}</td>
-                  <td style={s.td}>
-                    <span style={badgeStyle('#60a5fa')}>{SCENARIO_LABEL[c.case_type] || c.case_type}</span>
-                  </td>
-                  <td style={s.td}>
-                    <span style={badgeStyle(STATUS_COLORS[c.status] || '#64748b')}>
-                      {c.status.replace(/_/g, ' ')}
-                    </span>
-                  </td>
-                  <td style={s.td}>
-                    {(c.validation_flags || []).filter((f) => f.severity === 'warning').length > 0 && (
-                      <span style={badgeStyle('#fb923c')}>
-                        ⚠ {(c.validation_flags || []).filter((f) => f.severity === 'warning').length}
-                      </span>
-                    )}
-                  </td>
-                  <td style={{ ...s.td, color: '#64748b', fontSize: 12 }}>{formatDate(c.created_at)}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+  return (
+    <AdminLayout pendingCount={pendingCount}>
+      <div style={s.page}>
+        <div style={s.header}>
+          <h1 style={s.title}>Cola de revisión</h1>
+          {pendingCount > 0 && <span style={s.countBadge}>{pendingCount} pendientes</span>}
+        </div>
+
+        <div style={s.card}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th style={s.th}>Caso</th>
+                <th style={s.th}>Consumidora</th>
+                <th style={s.th}>Escenario</th>
+                <th style={s.th}>Estado</th>
+                <th style={s.th}>Fecha</th>
+                <th style={s.th}>Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={6} style={s.empty}>Cargando...</td></tr>
+              ) : cases.length === 0 ? (
+                <tr><td colSpan={6} style={s.empty}>No hay casos en la cola</td></tr>
+              ) : (
+                cases.map((c) => {
+                  const badge = statusToBadge(c.status)
+                  return (
+                    <tr
+                      key={c.case_id}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(26,58,92,0.04)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <td style={{ ...s.td, fontFamily: 'monospace', fontSize: 12, color: colors.textMuted }}>
+                        #{c.case_id.slice(-6)}
+                      </td>
+                      <td style={{ ...s.td, fontWeight: 500 }}>{c.consumer_name}</td>
+                      <td style={s.td}>
+                        <span style={{ fontSize: 13, color: colors.textMuted }}>
+                          {SCENARIO_LABEL[c.case_type] || c.case_type}
+                        </span>
+                      </td>
+                      <td style={s.td}>
+                        <Badge status={badge.status} label={badge.label} />
+                      </td>
+                      <td style={{ ...s.td, color: colors.textMuted, fontSize: 13 }}>{formatDate(c.created_at)}</td>
+                      <td style={s.td}>
+                        <button
+                          style={s.reviewBtn}
+                          onClick={() => navigate(`/admin/cases/${c.case_id}`)}
+                        >
+                          Revisar →
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+    </AdminLayout>
   )
 }

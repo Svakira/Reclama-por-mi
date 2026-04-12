@@ -5,6 +5,9 @@ Shared Groq client singleton. Returns a mock in test mode (no GROQ_API_KEY).
 import os
 from typing import Optional
 
+PRIMARY_MODEL = "llama-3.3-70b-versatile"
+FALLBACK_MODEL = "llama-3.1-8b-instant"
+
 _groq = None
 
 
@@ -18,6 +21,34 @@ def get_groq():
         else:
             _groq = _MockGroq()
     return _groq
+
+
+def create_chat_stream(client, messages: list, max_tokens: int = 1024):
+    """Try PRIMARY_MODEL first; if rate-limited, fall back to FALLBACK_MODEL.
+
+    Returns a synchronous Groq streaming iterator (same as client.chat.completions.create
+    with stream=True). Both models return the same chunk interface.
+    """
+    try:
+        from groq import RateLimitError
+    except ImportError:
+        RateLimitError = Exception  # mock mode has no groq package
+
+    try:
+        return client.chat.completions.create(
+            model=PRIMARY_MODEL,
+            messages=messages,
+            stream=True,
+            max_tokens=max_tokens,
+        )
+    except RateLimitError as e:
+        print(f"[GROQ FALLBACK] {PRIMARY_MODEL} rate-limited — retrying with {FALLBACK_MODEL}: {str(e)[:120]}")
+        return client.chat.completions.create(
+            model=FALLBACK_MODEL,
+            messages=messages,
+            stream=True,
+            max_tokens=max_tokens,
+        )
 
 
 class _MockGroqResponse:
@@ -66,8 +97,18 @@ class _MockGroq:
         self.audio = _MockGroq._Audio()
 
 
-def chat_complete(messages: list, model: str = "llama-3.3-70b-versatile", **kwargs) -> str:
-    """Single-call wrapper. Returns content string."""
+def chat_complete(messages: list, model: str = PRIMARY_MODEL, **kwargs) -> str:
+    """Single-call wrapper. Returns content string with rate-limit fallback."""
     client = get_groq()
-    response = client.chat.completions.create(model=model, messages=messages, **kwargs)
+    try:
+        from groq import RateLimitError
+    except ImportError:
+        RateLimitError = Exception
+
+    try:
+        response = client.chat.completions.create(model=model, messages=messages, **kwargs)
+    except RateLimitError as e:
+        fallback_model = FALLBACK_MODEL if model == PRIMARY_MODEL else model
+        print(f"[GROQ FALLBACK] {model} rate-limited — retrying with {fallback_model}: {str(e)[:120]}")
+        response = client.chat.completions.create(model=fallback_model, messages=messages, **kwargs)
     return response.choices[0].message.content

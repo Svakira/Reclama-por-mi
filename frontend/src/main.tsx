@@ -10,7 +10,7 @@ import PrivateRoute from './admin/PrivateRoute'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         {/* Rosa's public interface */}
         <Route path="/app" element={<ChatView />} />

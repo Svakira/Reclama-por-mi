@@ -4,7 +4,13 @@ Stage 3: DocumentParser
 - Extracts structured fields from PDF or image uploads
 - Produces a confidence score (0.0 – 1.0)
 - Documents with confidence < 0.70 trigger the illegibility hard gate
+
+Fallback chain for text extraction:
+  PDF:   pdfplumber -> PyMuPDF/fitz
+  Image: pytesseract+PIL -> Groq vision (base64)
+  Any:   Groq vision as last resort for images
 """
+import base64
 import io
 import json
 import os
@@ -12,6 +18,11 @@ import re
 from typing import Optional
 
 CONFIDENCE_THRESHOLD = 0.70
+
+VISION_MODEL_CANDIDATES = [
+    "meta-llama/llama-4-scout-17b-16e-instruct",
+    "llama-3.2-11b-vision-preview",
+]
 
 
 def _extract_pdf_text(file_bytes: bytes) -> str:
@@ -31,23 +42,98 @@ def _extract_pdf_text(file_bytes: bytes) -> str:
         return ""
 
 
-def _extract_image_text(file_bytes: bytes) -> str:
-    """Extract text from image using Tesseract OCR."""
+def _extract_image_text_ocr(file_bytes: bytes) -> str:
+    """Extract text from image using Tesseract OCR via PIL (cv2-free)."""
     try:
-        import cv2
-        import numpy as np
         import pytesseract
-        nparr = np.frombuffer(file_bytes, np.uint8)
-        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
-        return pytesseract.image_to_string(thresh, lang="spa")
+        from PIL import Image, ImageFilter
+        img = Image.open(io.BytesIO(file_bytes)).convert("L")
+        img = img.filter(ImageFilter.SHARPEN)
+        text = pytesseract.image_to_string(img, lang="spa")
+        return text
+    except Exception:
+        pass
+    return ""
+
+
+def _extract_image_text_groq_vision(file_bytes: bytes, filename: str = "doc.jpg") -> str:
+    """Last-resort: send image as base64 to Groq vision model for text extraction."""
+    try:
+        from backend.agents.groq_client import get_groq
+        client = get_groq()
+        if client is None:
+            return ""
+        b64 = base64.b64encode(file_bytes).decode("utf-8")
+        ext = filename.rsplit(".", 1)[-1].lower()
+        mime = {
+            "jpg": "image/jpeg",
+            "jpeg": "image/jpeg",
+            "png": "image/png",
+            "webp": "image/webp",
+            "tiff": "image/tiff",
+        }.get(ext, "image/jpeg")
+        for model in VISION_MODEL_CANDIDATES:
+            try:
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[{
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": (
+                                    "Transcribe todo el texto visible en esta imagen de documento. "
+                                    "Incluye todos los campos, numeros, fechas y montos que veas. "
+                                    "Responde SOLO con el texto transcrito, sin comentarios."
+                                )
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": f"data:{mime};base64,{b64}"},
+                            }
+                        ],
+                    }],
+                    max_tokens=2048,
+                )
+                content = response.choices[0].message.content or ""
+                if content.strip():
+                    return content
+            except Exception:
+                continue
+        return ""
+    except Exception:
+        return ""
+
+
+def _extract_image_text(file_bytes: bytes, filename: str = "doc.jpg") -> str:
+    """Try OCR first, then Groq vision if OCR yields too little."""
+    text = _extract_image_text_ocr(file_bytes)
+    if len(text.strip()) >= 80:
+        return text
+    vision_text = _extract_image_text_groq_vision(file_bytes, filename)
+    return vision_text if vision_text.strip() else text
+
+
+def _extract_pdf_as_image(file_bytes: bytes) -> str:
+    """
+    For scanned PDFs where text extraction yields nothing:
+    render first page via PyMuPDF and run OCR.
+    """
+    try:
+        import fitz
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        if len(doc) == 0:
+            return ""
+        page = doc[0]
+        mat = fitz.Matrix(2.0, 2.0)
+        pix = page.get_pixmap(matrix=mat)
+        img_bytes = pix.tobytes("png")
+        return _extract_image_text(img_bytes, "page.png")
     except Exception:
         return ""
 
 
 def _score_extraction(raw_text: str, extracted_fields: dict) -> float:
-    """Heuristic confidence score based on field extraction quality."""
     if not raw_text or len(raw_text) < 50:
         return 0.30
     filled = sum(1 for v in extracted_fields.values() if v and str(v).strip())
@@ -81,7 +167,6 @@ Responde SOLO con JSON válido, sin texto adicional."""
 
     try:
         result = chat_complete([{"role": "user", "content": prompt}])
-        # Strip markdown code blocks if present
         result = re.sub(r"```json\s*|\s*```", "", result).strip()
         return json.loads(result)
     except Exception:
@@ -109,8 +194,10 @@ class DocumentParser:
 
         if filename_lower.endswith(".pdf"):
             raw_text = _extract_pdf_text(file_bytes)
+            if not raw_text.strip():
+                raw_text = _extract_pdf_as_image(file_bytes)
         elif any(filename_lower.endswith(ext) for ext in (".jpg", ".jpeg", ".png", ".webp", ".tiff", ".bmp")):
-            raw_text = _extract_image_text(file_bytes)
+            raw_text = _extract_image_text(file_bytes, filename)
         else:
             raw_text = file_bytes.decode("utf-8", errors="ignore")
 

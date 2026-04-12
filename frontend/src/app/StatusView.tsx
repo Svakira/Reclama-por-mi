@@ -1,49 +1,22 @@
+// frontend/src/app/StatusView.tsx
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import api from '../api/client'
+import Navbar from '../components/Navbar'
+import Footer from '../components/Footer'
+import Badge from '../components/Badge'
+import { colors, shadows } from '../styles/tokens'
 
-const STATUS_LABELS: Record<string, string> = {
-  PENDING_REVIEW: 'En revisión por el abogado',
-  LAWYER_REVIEWING: 'El abogado está revisando tu caso',
-  APPROVED: 'Aprobado — preparando envío',
-  SUBMITTED_TO_SIC: '✅ Enviado a la SIC',
-  FILING_OPTION_2_PDF_READY: '✅ Tu PDF está listo para descargar',
-  DOCS_REQUESTED: 'El abogado necesita más documentos',
-  PENDING_CLAIM_DECISION: 'Revisión especial en progreso',
-  NO_CLAIM_CONFIRMED: 'Ver resultado del análisis',
-  ILLEGIBLE_DOCUMENT_BLOCKED: 'Revisando documento con el abogado',
-  CLOSED: 'Caso cerrado',
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    padding: '40px 20px',
-  },
-  card: {
-    background: '#1e293b',
-    border: '1px solid #334155',
-    borderRadius: 16,
-    padding: 24,
-    maxWidth: 480,
-    width: '100%',
-  },
-  title: { fontSize: 20, fontWeight: 700, color: '#38bdf8', marginBottom: 8 },
-  caseId: { fontSize: 13, color: '#64748b', marginBottom: 20 },
-  status: {
-    background: '#0f2d1a',
-    border: '1px solid #22c55e',
-    borderRadius: 10,
-    padding: '12px 16px',
-    color: '#86efac',
-    fontSize: 15,
-    fontWeight: 600,
-  },
-  hint: { color: '#94a3b8', fontSize: 13, marginTop: 12, lineHeight: 1.6 },
+const STATUS_CONFIG: Record<string, { label: string; badge: 'pending' | 'active' | 'approved' | 'ready' | 'blocked' | 'info' | 'rejected'; hint: string }> = {
+  PENDING_REVIEW: { label: 'En revisión por el abogado', badge: 'pending', hint: 'Tu caso está en la cola de revisión. Un abogado lo analizará pronto.' },
+  LAWYER_REVIEWING: { label: 'El abogado está revisando tu caso', badge: 'active', hint: 'El abogado de la clínica está analizando tu reclamación.' },
+  APPROVED: { label: 'Aprobado — preparando envío', badge: 'approved', hint: 'Tu reclamación fue aprobada y está siendo preparada para enviar a la SIC.' },
+  SUBMITTED_TO_SIC: { label: 'Enviado a la SIC', badge: 'ready', hint: 'Tu reclamación fue presentada formalmente ante la Superintendencia de Industria y Comercio.' },
+  DOCS_REQUESTED: { label: 'Se necesitan más documentos', badge: 'info', hint: 'El abogado necesita documentos adicionales. Nos comunicaremos contigo pronto.' },
+  PENDING_CLAIM_DECISION: { label: 'En revisión especial', badge: 'pending', hint: 'Tu caso está siendo revisado por un abogado. Recibirás una respuesta pronto.' },
+  NO_CLAIM_CONFIRMED: { label: 'Análisis completado', badge: 'info', hint: 'El abogado analizó tu caso y tiene una respuesta para ti. Nos comunicaremos contigo.' },
+  ILLEGIBLE_DOCUMENT_BLOCKED: { label: 'Revisando documento', badge: 'blocked', hint: 'Un documento no pudo leerse correctamente. El abogado lo revisará manualmente.' },
+  CLOSED: { label: 'Caso cerrado', badge: 'info', hint: 'Este caso ha sido cerrado.' },
 }
 
 export default function StatusView() {
@@ -66,23 +39,63 @@ export default function StatusView() {
     return () => clearInterval(interval)
   }, [caseId])
 
+  const config = STATUS_CONFIG[status]
+
+  const s: Record<string, React.CSSProperties> = {
+    page: { minHeight: '100vh', display: 'flex', flexDirection: 'column', background: colors.bg },
+    content: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 20px' },
+    card: {
+      background: colors.surface,
+      border: `1px solid ${colors.border}`,
+      borderRadius: 12,
+      padding: 32,
+      maxWidth: 520,
+      width: '100%',
+      boxShadow: shadows.card,
+    },
+    cardTitle: { fontSize: 20, fontWeight: 700, color: colors.primary, marginBottom: 6 },
+    caseIdLabel: { fontSize: 13, color: colors.textMuted, marginBottom: 24 },
+    statusRow: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 },
+    statusLabel: { fontSize: 16, fontWeight: 600, color: colors.text },
+    hint: { fontSize: 14, color: colors.textMuted, lineHeight: 1.6, marginBottom: 20 },
+    saveNote: {
+      background: colors.bg,
+      border: `1px solid ${colors.border}`,
+      borderRadius: 8,
+      padding: '10px 14px',
+      fontSize: 13,
+      color: colors.textMuted,
+    },
+    errorText: { color: colors.danger, fontSize: 15 },
+  }
+
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <div style={styles.title}>Estado de tu caso</div>
-        <div style={styles.caseId}>Número: {caseId}</div>
-        {error ? (
-          <div style={{ color: '#f87171' }}>No se encontró el caso. Verifica el número.</div>
-        ) : (
-          <>
-            <div style={styles.status}>{STATUS_LABELS[status] || status}</div>
-            <div style={styles.hint}>
-              Te avisaremos por WhatsApp cuando haya novedades.<br />
-              Guarda este número de caso: <strong>{caseId}</strong>
-            </div>
-          </>
-        )}
+    <div style={s.page}>
+      <Navbar />
+      <div style={s.content}>
+        <div style={s.card}>
+          <div style={s.cardTitle}>Estado de tu caso</div>
+          <div style={s.caseIdLabel}>Número de referencia: <strong>{caseId}</strong></div>
+          {error ? (
+            <div style={s.errorText}>No se encontró el caso. Verifica el número.</div>
+          ) : (
+            <>
+              <div style={s.statusRow}>
+                {config ? (
+                  <Badge status={config.badge} label={config.label} />
+                ) : (
+                  <span style={s.statusLabel}>{status}</span>
+                )}
+              </div>
+              <p style={s.hint}>{config?.hint || 'Te avisaremos cuando haya novedades.'}</p>
+              <div style={s.saveNote}>
+                Guarda este número: <strong>{caseId}</strong> · Te notificaremos por WhatsApp cuando haya novedades.
+              </div>
+            </>
+          )}
+        </div>
       </div>
+      <Footer />
     </div>
   )
 }
