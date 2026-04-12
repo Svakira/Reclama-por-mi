@@ -1,5 +1,6 @@
 # Superpowers internal planning docs (not for public repo)
 docs/superpowers/
+.worktrees/
 
 # Python
 __pycache__/
