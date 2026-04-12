@@ -34,16 +34,16 @@ export default function Sidebar({ pendingCount = 0 }: SidebarProps) {
       title: 'Panel',
       items: [
         { label: 'Cola de revisión', path: '/admin', badge: pendingCount },
-        { label: 'Aprobados', path: null },
-        { label: 'Rechazados', path: null },
+        { label: 'Aprobados', path: '/admin/approved' },
+        { label: 'Cerrados', path: '/admin/closed' },
       ],
     },
     {
       title: 'Gestión',
       items: [
-        { label: 'Mis casos', path: null },
-        { label: 'Reportes', path: null },
-        { label: 'Configuración', path: null },
+        { label: 'Mis casos', path: '/admin/my-cases' },
+        { label: 'Reportes', path: '/admin/reports' },
+        { label: 'Configuración', path: '/admin/settings' },
       ],
     },
   ]
@@ -171,7 +171,11 @@ export default function Sidebar({ pendingCount = 0 }: SidebarProps) {
           <div style={s.sectionTitle}>{section.title}</div>
           {section.items.map((item) => {
             const disabled = !item.path
-            const active = !!item.path && (location.pathname === item.path || location.pathname.startsWith(`${item.path}/`))
+            const active = !!item.path && (
+              item.path === '/admin'
+                ? location.pathname === '/admin'
+                : (location.pathname === item.path || location.pathname.startsWith(`${item.path}/`))
+            )
             return (
               <div
                 key={item.label}

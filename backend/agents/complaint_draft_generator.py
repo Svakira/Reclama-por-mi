@@ -158,7 +158,11 @@ Reglas estrictas:
 - NO des opiniones legales ni diagnósticos sobre el caso.
 - NO digas si la reclamación es válida o no.
 - NO menciones artículos de ley ni análisis jurídico.
-- Solo explica estos pasos: (1) recibimos tu caso, (2) un abogado lo revisará, (3) te avisaremos el resultado.
+- NO uses la palabra "archivar" ni "archivaremos".
+- Explica estos pasos de forma cercana y humana:
+  (1) Tu caso ya quedó registrado en nuestro sistema.
+  (2) Un abogado especializado de la clínica jurídica lo revisará personalmente y preparará los trámites necesarios ante la SIC.
+  (3) Te avisaremos cuando haya novedades sobre tu reclamación.
 - Usa máximo 80 palabras.
 - Empieza con el nombre del consumidor y termina con una frase de aliento."""
 

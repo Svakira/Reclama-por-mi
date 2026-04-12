@@ -26,7 +26,29 @@ _memory_store: dict[str, dict[str, Any]] = {
     "drafts": {},
     "audit_logs": {},
     "sessions": {},
+    "counters": {},
 }
+
+
+async def get_next_case_number() -> str:
+    """Generate sequential case ID: JUS-YYYY-001, JUS-YYYY-002, etc."""
+    year = datetime.now(timezone.utc).strftime("%Y")
+    counter_key = f"case_counter_{year}"
+
+    if _USE_REAL_FIRESTORE:
+        from google.cloud.firestore_v1 import Increment
+        counter_ref = _db.collection("counters").document(counter_key)
+        await counter_ref.set({"value": Increment(1)}, merge=True)
+        doc = await counter_ref.get()
+        num = doc.to_dict().get("value", 1)
+    else:
+        counters = _memory_store.setdefault("counters", {})
+        current = counters.get(counter_key, {"value": 0})
+        current["value"] = current.get("value", 0) + 1
+        counters[counter_key] = current
+        num = current["value"]
+
+    return f"JUS-{year}-{num:03d}"
 
 
 async def get_document(collection: str, doc_id: str) -> Optional[dict]:
@@ -94,8 +116,9 @@ async def list_subcollection(
 def seed_demo_case() -> None:
     """Seeds demo data for hackathon presentation."""
     now = datetime.now(timezone.utc).isoformat()
+    year = datetime.now(timezone.utc).strftime("%Y")
+    _memory_store.setdefault("counters", {})[f"case_counter_{year}"] = {"value": 1}
 
-    # Escenario A — Rosa, celular defectuoso
     _memory_store["cases"]["JUS-2026-001"] = {
         "case_id": "JUS-2026-001",
         "consumer_name": "Rosa Inés Morales Vargas",

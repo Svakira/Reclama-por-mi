@@ -6,7 +6,6 @@ Stage 8: CasePackager
 - Saves to Firestore
 - Triggers WhatsApp notification to Rosa
 """
-import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -62,7 +61,8 @@ async def package_case(
         f"document_confidence={document_confidence}"
     )
 
-    case_id = f"JUS-{datetime.now(timezone.utc).strftime('%Y')}-{str(uuid.uuid4())[:6].upper()}"
+    from backend.db.firestore_client import get_next_case_number
+    case_id = await get_next_case_number()
     now = datetime.now(timezone.utc).isoformat()
 
     priority = calculate_priority(legal_classification, validation_result, document_confidence)

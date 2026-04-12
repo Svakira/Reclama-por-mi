@@ -471,8 +471,17 @@ async def finalize_pipeline(body: dict):
         legal_classification=legal_class,
     )
 
+    evidence_descriptions = []
+    for d in session.get("uploaded_docs", []):
+        if d.get("evidence_description"):
+            evidence_descriptions.append(f"- {d['doc_type']}: {d['evidence_description']}")
+
+    case_context = {}
+    if evidence_descriptions:
+        case_context["evidencias_fotograficas"] = "\n".join(evidence_descriptions)
+
     t_draft = time.perf_counter()
-    draft_formal = generate_formal_draft(narrative, fields, legal_class, {})
+    draft_formal = generate_formal_draft(narrative, fields, legal_class, case_context)
     _pipeline_log(
         session_id, "STAGE_6_ComplaintDraftGenerator", "formal.draft.generated",
         elapsed_ms=round((time.perf_counter() - t_draft) * 1000, 2),
@@ -525,6 +534,7 @@ async def finalize_pipeline(body: dict):
             "doc_type": d["doc_type"],
             "confidence": d["confidence"],
             "needs_review": d.get("needs_review", False),
+            "evidence_description": d.get("evidence_description"),
         }
         for d in session.get("uploaded_docs", [])
     ]

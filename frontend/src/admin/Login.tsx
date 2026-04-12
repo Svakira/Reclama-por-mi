@@ -19,6 +19,7 @@ export default function Login() {
       const res = await api.post('/auth/login', { email, password })
       localStorage.setItem('justicia_token', res.data.token)
       localStorage.setItem('justicia_lawyer_name', res.data.name)
+      localStorage.setItem('justicia_lawyer_email', email)
       navigate('/admin')
     } catch {
       setError('Credenciales incorrectas. Intenta de nuevo.')
