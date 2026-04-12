@@ -49,6 +49,7 @@ async def package_case(
     validation_result: dict,
     consumer_data: dict,
     provider_data: dict,
+    uploaded_documents: list | None = None,
 ) -> dict:
     """
     Package everything into a case record and save to Firestore.
@@ -69,10 +70,9 @@ async def package_case(
     scenario = legal_classification.get("scenario", "UNKNOWN")
     claim_valid = legal_classification.get("claim_valid", False)
 
-    # Determine initial status
-    if document_confidence < 0.70:
-        status = "ILLEGIBLE_DOCUMENT_BLOCKED"
-    elif not claim_valid:
+    docs_need_review = any(d.get("needs_review") for d in (uploaded_documents or []))
+
+    if not claim_valid:
         status = "PENDING_CLAIM_DECISION"
     else:
         status = "PENDING_REVIEW"
@@ -119,8 +119,9 @@ async def package_case(
         "ai_summary": ai_summary,
         "validation_flags": validation_flags,
         "legal_classification": legal_classification,
+        "documents": uploaded_documents or [],
         "document_confidence": document_confidence,
-        "document_illegible": document_confidence < 0.70,
+        "docs_need_review": docs_need_review,
         "claim_valid": claim_valid,
         "lawyer_approved": False,
         "notification_log": [],

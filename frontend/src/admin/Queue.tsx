@@ -30,6 +30,7 @@ interface Case {
   case_type: string
   created_at: string
   product_description?: string
+  docs_need_review?: boolean
 }
 
 export default function Queue() {
@@ -173,6 +174,20 @@ export default function Queue() {
                         <span style={{ color: colors.textMuted, fontSize: 12 }}>
                           {SCENARIO_LABEL[c.case_type] || c.case_type}
                         </span>
+                        {c.docs_need_review && (
+                          <span style={{
+                            display: 'inline-block',
+                            marginLeft: 8,
+                            background: 'rgba(184,134,11,0.15)',
+                            color: '#B8860B',
+                            borderRadius: 4,
+                            padding: '2px 6px',
+                            fontSize: 10,
+                            fontWeight: 700,
+                          }}>
+                            Doc. pendiente
+                          </span>
+                        )}
                       </td>
                       <td style={tdStyle}>
                         <span style={{

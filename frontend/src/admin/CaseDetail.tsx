@@ -39,7 +39,7 @@ interface CaseData {
   lawyer_approved: boolean
   created_at: string
   messages?: { role: string; text: string }[]
-  documents?: { name: string; doc_type: string; confidence: number }[]
+  documents?: { name: string; doc_type: string; confidence: number; needs_review?: boolean }[]
   document_confidence?: number
 }
 
@@ -165,7 +165,7 @@ export default function CaseDetail() {
   const canAct = isPendingClaim || (!caseData.lawyer_approved && caseData.status !== 'CLOSED')
   const badgeInfo = statusToBadge(caseData.status)
   const docs = caseData.documents || []
-  const hasIllegible = docs.some((d) => d.confidence < 0.7)
+  const hasIllegible = docs.some((d) => d.needs_review || d.confidence < 0.7)
   const articleAnalysis = caseData.legal_classification?.article_analysis || []
   const completeness = useMemo(() => {
     const base = Math.round((caseData.document_confidence || 0.72) * 100)
@@ -495,20 +495,33 @@ export default function CaseDetail() {
                 <h3 style={s.cardTitle}>Documentos adjuntos</h3>
                 {hasIllegible && (
                   <div style={{ ...s.articlePanel, borderColor: `${colors.warning}55`, color: '#8A5A15' }}>
-                    Uno o más documentos tienen baja calidad (confianza &lt; 70%).
+                    Uno o más documentos requieren revisión manual del abogado.
                   </div>
                 )}
                 {docs.length === 0 ? (
                   <p style={{ color: colors.textMuted }}>No hay documentos adjuntos.</p>
                 ) : docs.map((doc, i) => {
-                  const ok = doc.confidence >= 0.7
+                  const needsReview = doc.needs_review || doc.confidence < 0.7
                   return (
                     <div key={i} style={s.docRow}>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 600 }}>{doc.name}</div>
-                        <div style={{ fontSize: 12, color: colors.textMuted }}>{doc.doc_type}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{
+                          width: 36, height: 36, borderRadius: 4,
+                          background: needsReview ? '#B8860B' : colors.primary,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: '#fff', fontSize: 13, fontWeight: 700, flexShrink: 0,
+                        }}>
+                          {needsReview ? '!' : 'OK'}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600 }}>{doc.name}</div>
+                          <div style={{ fontSize: 12, color: colors.textMuted }}>{doc.doc_type}</div>
+                        </div>
                       </div>
-                      <Badge status={ok ? 'approved' : 'blocked'} label={`${Math.round(doc.confidence * 100)}%`} />
+                      <Badge
+                        status={needsReview ? 'pending' : 'approved'}
+                        label={needsReview ? 'Pendiente revisión' : `${Math.round(doc.confidence * 100)}%`}
+                      />
                     </div>
                   )
                 })}

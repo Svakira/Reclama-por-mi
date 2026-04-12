@@ -329,20 +329,14 @@ async def upload_document(
         scenario,
     )
 
-    if parse_result["blocked"]:
-        return {
-            "session_id": session_id,
-            "stage": session["stage"],
-            "confidence": parse_result["confidence"],
-            "blocked": True,
-            "message": "No pude leer bien ese documento (calidad muy baja). Intenta subir una foto más clara o un PDF legible.",
-        }
+    needs_review = parse_result["blocked"] or parse_result["confidence"] < 0.70
 
     session["uploaded_docs"].append({
         "filename": file.filename or "doc.pdf",
         "doc_type": inferred_type,
         "confidence": parse_result["confidence"],
         "fields": list(parse_result.get("fields", {}).keys()),
+        "needs_review": needs_review,
     })
 
     required = REQUIRED_DOCS_BY_SCENARIO.get(scenario, ["factura"])
@@ -359,19 +353,33 @@ async def upload_document(
     type_label = DOC_LABELS.get(inferred_type, inferred_type)
     summary_block = "\n".join(extracted_summary[:8])
 
+    review_note = ""
+    if needs_review:
+        review_note = " (pendiente de revisión por el abogado)"
+
     if missing:
         missing_labels = [DOC_LABELS.get(d, d) for d in missing]
         msg = (
-            f"Recibí tu {type_label} ({file.filename}).\n"
-            f"Datos extraídos:\n{summary_block}\n\n"
+            f"Recibí tu documento ({file.filename}){review_note}.\n"
+        )
+        if summary_block:
+            msg += f"Datos extraídos:\n{summary_block}\n\n"
+        else:
+            msg += "\n"
+        msg += (
             f"Para completar tu caso, también necesito:\n" +
             "\n".join(f"- {lbl}" for lbl in missing_labels) +
             "\n\nSúbelos con el botón de adjuntar, o presiona 'Procesar mi reclamación' si no los tienes."
         )
     else:
         msg = (
-            f"Recibí tu {type_label} ({file.filename}).\n"
-            f"Datos extraídos:\n{summary_block}\n\n"
+            f"Recibí tu documento ({file.filename}){review_note}.\n"
+        )
+        if summary_block:
+            msg += f"Datos extraídos:\n{summary_block}\n\n"
+        else:
+            msg += "\n"
+        msg += (
             "Ya tengo todos los documentos necesarios. "
             "Presiona 'Procesar mi reclamación' para continuar."
         )
@@ -381,6 +389,7 @@ async def upload_document(
         "stage": "DOCS_NEEDED",
         "confidence": parse_result["confidence"],
         "blocked": False,
+        "needs_review": needs_review,
         "uploaded_docs": uploaded_types,
         "missing_docs": missing,
         "extracted_fields": parse_result.get("fields", {}),
@@ -487,6 +496,16 @@ async def finalize_pipeline(body: dict):
         "address": "",
     }
 
+    uploaded_docs_for_case = [
+        {
+            "name": d["filename"],
+            "doc_type": d["doc_type"],
+            "confidence": d["confidence"],
+            "needs_review": d.get("needs_review", False),
+        }
+        for d in session.get("uploaded_docs", [])
+    ]
+
     t_pack = time.perf_counter()
     pkg = await package_case(
         session_id=session_id,
@@ -501,6 +520,7 @@ async def finalize_pipeline(body: dict):
         validation_result=validation,
         consumer_data=consumer_data,
         provider_data=provider_data,
+        uploaded_documents=uploaded_docs_for_case,
     )
     _pipeline_log(
         session_id, "STAGE_8_CasePackager", "case.packaged",
