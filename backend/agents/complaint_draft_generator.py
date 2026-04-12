@@ -96,6 +96,10 @@ def generate_formal_draft(
     """Generate the formal SIC complaint draft using KG articles and templates."""
     scenario = classification.get("scenario", "A")
     system_prompt = _build_formal_prompt(scenario)
+    print(
+        f"[AGENT][ComplaintDraftGenerator] formal.start scenario={scenario} "
+        f"narrative_len={len(narrative)} fields={list(document_fields.keys())[:10]}"
+    )
 
     context = (
         f"RELATO DE LA CONSUMIDORA: {narrative}\n\n"
@@ -109,11 +113,17 @@ def generate_formal_draft(
         {"role": "user", "content": context},
     ]
 
-    return chat_complete(messages)
+    out = chat_complete(messages)
+    print(f"[AGENT][ComplaintDraftGenerator] formal.done draft_len={len(out or '')}")
+    return out
 
 
 def generate_simple_explanation(formal_draft: str, consumer_name: str) -> str:
     """Generate plain Spanish explanation for Rosa."""
+    print(
+        f"[AGENT][ComplaintDraftGenerator] simple.start consumer={consumer_name} "
+        f"formal_len={len(formal_draft or '')}"
+    )
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT_SIMPLE},
         {
@@ -124,4 +134,6 @@ def generate_simple_explanation(formal_draft: str, consumer_name: str) -> str:
             ),
         },
     ]
-    return chat_complete(messages)
+    out = chat_complete(messages)
+    print(f"[AGENT][ComplaintDraftGenerator] simple.done text_len={len(out or '')}")
+    return out

@@ -58,11 +58,20 @@ def cross_validate(narrative: str, document_fields: dict) -> dict:
     ]
 
     try:
+        print(
+            f"[AGENT][EvidenceCrossValidator] start narrative_len={len(narrative)} fields={list(document_fields.keys())[:10]}"
+        )
         result = chat_complete(messages)
         result = re.sub(r"```json\s*|\s*```", "", result).strip()
-        return json.loads(result)
+        parsed = json.loads(result)
+        print(
+            f"[AGENT][EvidenceCrossValidator] done discrepancies={len(parsed.get('discrepancies', []))} "
+            f"passed={parsed.get('cross_validation_passed')}"
+        )
+        return parsed
     except Exception as e:
         # Fail safe — don't block pipeline on validator error
+        print(f"[AGENT][EvidenceCrossValidator] error={str(e)[:180]}")
         return {
             "discrepancies": [],
             "cross_validation_passed": True,

@@ -108,12 +108,21 @@ def classify(
     ]
 
     try:
+        print(
+            f"[AGENT][LegalClassifier] start prelim={preliminary_scenario} has_pqr={has_pqr} "
+            f"narrative_len={len(narrative)} fields={list(document_fields.keys())[:10]}"
+        )
         result = chat_complete(messages)
         result = re.sub(r"```json\s*|\s*```", "", result).strip()
         classification = json.loads(result)
+        print(
+            f"[AGENT][LegalClassifier] done scenario={classification.get('scenario')} "
+            f"claim_valid={classification.get('claim_valid')} confidence={classification.get('confidence')}"
+        )
         return classification
     except Exception as e:
         # Safe fallback — human review
+        print(f"[AGENT][LegalClassifier] error={str(e)[:180]}")
         return {
             "scenario": preliminary_scenario or "UNKNOWN",
             "claim_valid": False,

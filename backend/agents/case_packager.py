@@ -55,6 +55,11 @@ async def package_case(
     Returns the case_id and assembled case dict.
     """
     from backend.db.firestore_client import set_document
+    print(
+        f"[AGENT][CasePackager] start session={session_id} "
+        f"scenario={legal_classification.get('scenario')} claim_valid={legal_classification.get('claim_valid')} "
+        f"document_confidence={document_confidence}"
+    )
 
     case_id = f"JUS-{datetime.now(timezone.utc).strftime('%Y')}-{str(uuid.uuid4())[:6].upper()}"
     now = datetime.now(timezone.utc).isoformat()
@@ -130,5 +135,8 @@ async def package_case(
 
     await set_document("cases", case_id, case)
     await set_document("drafts", case_id, draft)
+    print(
+        f"[AGENT][CasePackager] done case_id={case_id} status={status} priority={priority}"
+    )
 
     return {"case_id": case_id, "case": case}

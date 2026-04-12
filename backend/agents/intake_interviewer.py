@@ -6,10 +6,20 @@ Stage 0–1: IntakeInterviewer
 - Returns structured conversation state
 """
 import json
+import os
 import uuid
 from typing import Optional
 
 from backend.agents.groq_client import chat_complete
+
+DEBUG_VERBOSE = os.getenv("DEBUG_VERBOSE", "false").lower() in {"1", "true", "yes", "on"}
+
+
+def _safe_text(text: str) -> str:
+    if DEBUG_VERBOSE:
+        return text
+    flat = " ".join((text or "").split())
+    return flat if len(flat) <= 180 else f"{flat[:180]}... (len={len(flat)})"
 
 SYSTEM_PROMPT = """Eres JusticIA, un asistente legal colombiano amable y claro.
 Ayudas a consumidores a identificar si tienen una reclamación válida ante la SIC 
@@ -83,6 +93,7 @@ class IntakeInterviewer:
 
     def process_message(self, user_message: str) -> dict:
         """Process user message and return agent reply + state."""
+        print(f"[AGENT][IntakeInterviewer][session={self.session_id}] user.message={_safe_text(user_message)}")
         self.history.append({"role": "user", "content": user_message})
 
         raw_reply = chat_complete(self.history)
@@ -109,6 +120,13 @@ class IntakeInterviewer:
                 next_action = "continue_conversation"
         else:
             next_action = "continue_conversation"
+
+        print(
+            f"[AGENT][IntakeInterviewer][session={self.session_id}] "
+            f"stage={self.stage} next_action={next_action} "
+            f"classification={classification if DEBUG_VERBOSE else {'scenario': (classification or {}).get('scenario'), 'minimum_vars_collected': (classification or {}).get('minimum_vars_collected')}} "
+            f"agent_reply={_safe_text(clean)}"
+        )
 
         return {
             "session_id": self.session_id,

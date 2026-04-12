@@ -28,6 +28,19 @@ export default function ChatView() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const chatRef = useRef<HTMLDivElement>(null)
 
+  const iconBtnBase: React.CSSProperties = {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    border: `1px solid ${colors.border}`,
+    background: '#f1f3f5',
+    color: '#495057',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+  }
+
   useEffect(() => { startSession() }, [])
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
@@ -90,6 +103,8 @@ export default function ChatView() {
     chatRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  const isMobile = typeof window !== 'undefined' ? window.innerWidth <= 960 : false
+
   const s: Record<string, React.CSSProperties> = {
     page: { minHeight: '100vh', display: 'flex', flexDirection: 'column', background: colors.bg },
     hero: {
@@ -127,7 +142,55 @@ export default function ChatView() {
       padding: '56px 20px',
       flex: 1,
     },
-    chatSectionInner: { maxWidth: 720, margin: '0 auto' },
+    chatSectionInner: { maxWidth: 1120, margin: '0 auto' },
+    workspace: {
+      display: 'grid',
+      gridTemplateColumns: isMobile ? '1fr' : '300px 1fr',
+      gap: 20,
+      alignItems: 'start',
+    },
+    guideCard: {
+      border: `1px solid ${colors.border}`,
+      borderRadius: 12,
+      background: '#f8f9fa',
+      boxShadow: shadows.card,
+      padding: 18,
+      position: 'sticky',
+      top: 72,
+    },
+    guideTitle: {
+      margin: 0,
+      fontSize: 15,
+      color: colors.primary,
+      fontWeight: 700,
+      marginBottom: 10,
+    },
+    guideText: {
+      margin: 0,
+      color: colors.textMuted,
+      fontSize: 13,
+      lineHeight: 1.5,
+    },
+    guideList: {
+      margin: '10px 0 0 0',
+      paddingLeft: 18,
+      color: colors.text,
+      fontSize: 13,
+      lineHeight: 1.6,
+    },
+    guideHint: {
+      marginTop: 12,
+      padding: '10px 12px',
+      borderRadius: 8,
+      background: '#edf2ff',
+      border: '1px solid #d0d9ff',
+      color: '#2d4f8f',
+      fontSize: 12,
+      lineHeight: 1.5,
+    },
+    chatCol: {
+      minWidth: 0,
+    },
     sectionTitle: {
       fontSize: 'clamp(1.25rem, 3vw, 1.6rem)',
       fontWeight: 700,
@@ -169,37 +232,58 @@ export default function ChatView() {
       borderTop: `1px solid ${colors.border}`,
       padding: '12px 16px',
       display: 'flex',
-      gap: 8,
+      gap: 10,
       alignItems: 'center',
+    },
+    inputShell: {
+      flex: 1,
+      border: `1px solid ${colors.border}`,
+      borderRadius: 20,
+      padding: '0 8px 0 12px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      background: colors.surface,
+    },
+    attachInsideBtn: {
+      ...iconBtnBase,
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      opacity: 0.72,
     },
     inputField: {
       flex: 1,
-      border: `1px solid ${colors.border}`,
-      borderRadius: 6,
-      padding: '10px 14px',
+      border: 'none',
+      borderRadius: 16,
+      padding: '10px 4px',
       fontSize: 14,
       color: colors.text,
       outline: 'none',
       background: colors.surface,
     },
+    inputActions: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+    },
+    audioBtn: {
+      ...iconBtnBase,
+      opacity: 0.85,
+    },
     sendBtn: {
       background: colors.primary,
       border: 'none',
-      borderRadius: 6,
-      padding: '10px 20px',
+      borderRadius: 18,
+      width: 36,
+      height: 36,
       color: '#fff',
       fontWeight: 600,
       cursor: 'pointer',
-      fontSize: 14,
-    },
-    attachBtn: {
-      background: colors.bg,
-      border: `1px solid ${colors.border}`,
-      borderRadius: 6,
-      padding: '10px 14px',
-      color: colors.textMuted,
-      cursor: 'pointer',
-      fontSize: 14,
+      fontSize: 13,
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     caseBox: {
       background: '#e8f5e9',
@@ -229,14 +313,13 @@ export default function ChatView() {
     <div style={s.page} id="top">
       <Navbar links={NAV_LINKS} />
 
-      {/* Hero */}
       <section style={s.hero}>
         <div style={s.heroInner}>
           <h1 style={s.heroTitle}>Defiende tus derechos como consumidor</h1>
           <p style={s.heroSub}>
             La Clínica Jurídica ICESI te ayuda a presentar tu reclamación ante la Superintendencia de Industria y Comercio de forma gratuita.
           </p>
-          <button style={s.heroCta} onClick={scrollToChat}>Iniciar mi caso →</button>
+          <button style={s.heroCta} onClick={scrollToChat}>Comenzar</button>
         </div>
       </section>
 
@@ -246,54 +329,92 @@ export default function ChatView() {
           <h2 style={s.sectionTitle}>Cuéntanos qué pasó</h2>
           <p style={s.sectionSub}>Nuestro asistente te guiará paso a paso</p>
 
-          <div style={s.chatBox}>
-            <div style={s.chatHeader}>JusticIA — Asistente de Reclamaciones</div>
-            <div style={s.chatMessages}>
-              {messages.map((m, i) => (
-                <div key={i} style={bubbleStyle(m.role)}>{m.text}</div>
-              ))}
-              {loading && (
-                <div style={{ ...bubbleStyle('assistant'), color: colors.textMuted }}>Escribiendo...</div>
-              )}
-              {caseId && (
-                <div style={s.caseBox}>
-                  ✅ Caso registrado: <strong>{caseId}</strong><br />
-                  Un abogado revisará tu reclamación. Te avisaremos por WhatsApp.
-                </div>
-              )}
-              <div ref={bottomRef} />
-            </div>
-
-            {stage !== 'COMPLETE' && (
-              <div style={s.inputArea}>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  style={{ display: 'none' }}
-                  onChange={handleFileUpload}
-                />
-                <button
-                  style={s.attachBtn}
-                  onClick={() => fileRef.current?.click()}
-                  disabled={uploading}
-                  title="Adjuntar documento"
-                >
-                  {uploading ? '⏳' : '📎'}
-                </button>
-                <input
-                  style={s.inputField}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Escribe tu mensaje..."
-                  onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                  disabled={loading}
-                />
-                <button style={s.sendBtn} onClick={sendMessage} disabled={loading || !input.trim()}>
-                  Enviar
-                </button>
+          <div style={s.workspace}>
+            <aside style={s.guideCard}>
+              <h3 style={s.guideTitle}>Guía rápida</h3>
+              <p style={s.guideText}>Para obtener un caso válido más rápido:</p>
+              <ul style={s.guideList}>
+                <li>Describe el problema en orden cronológico.</li>
+                <li>Incluye fechas, montos y empresa involucrada.</li>
+                <li>Adjunta factura o evidencia cuando te lo pida.</li>
+                <li>Responde las preguntas del asistente sin omitir datos.</li>
+              </ul>
+              <div style={s.guideHint}>
+                Resultado esperado: diagnóstico legal + borrador de reclamación + número de caso para seguimiento.
               </div>
-            )}
+            </aside>
+
+            <div style={s.chatCol}>
+              <div style={s.chatBox}>
+                <div style={s.chatHeader}>JusticIA — Asistente de Reclamaciones</div>
+                <div style={s.chatMessages}>
+                  {messages.map((m, i) => (
+                    <div key={i} style={bubbleStyle(m.role)}>{m.text}</div>
+                  ))}
+                  {loading && (
+                    <div style={{ ...bubbleStyle('assistant'), color: colors.textMuted }}>Escribiendo...</div>
+                  )}
+                  {caseId && (
+                    <div style={s.caseBox}>
+                      Caso registrado: <strong>{caseId}</strong><br />
+                      Un abogado revisará tu reclamación. Te avisaremos por WhatsApp.
+                    </div>
+                  )}
+                  <div ref={bottomRef} />
+                </div>
+
+                {stage !== 'COMPLETE' && (
+                  <div style={s.inputArea}>
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      style={{ display: 'none' }}
+                      onChange={handleFileUpload}
+                    />
+
+                    <div style={s.inputShell}>
+                      <button
+                        style={s.attachInsideBtn}
+                        onClick={() => fileRef.current?.click()}
+                        disabled={uploading}
+                        title="Adjuntar documento"
+                        aria-label="Adjuntar documento"
+                      >
+                        {uploading ? (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /></svg>
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.2-9.19a4 4 0 115.66 5.66l-9.2 9.2a2 2 0 11-2.83-2.83l8.49-8.48" /></svg>
+                        )}
+                      </button>
+
+                      <input
+                        style={s.inputField}
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        placeholder="Escribe tu mensaje..."
+                        onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                        disabled={loading}
+                      />
+                    </div>
+
+                    <div style={s.inputActions}>
+                      <button
+                        style={s.audioBtn}
+                        title="Grabar audio (próximamente)"
+                        aria-label="Grabar audio"
+                        disabled
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10a7 7 0 0014 0" /><path d="M12 19v3" /><path d="M8 22h8" /></svg>
+                      </button>
+                      <button style={s.sendBtn} onClick={sendMessage} disabled={loading || !input.trim()} aria-label="Enviar mensaje">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </section>

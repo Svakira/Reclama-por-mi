@@ -1,6 +1,6 @@
 // frontend/src/app/StatusView.tsx
 import React, { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import api from '../api/client'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
@@ -21,6 +21,7 @@ const STATUS_CONFIG: Record<string, { label: string; badge: 'pending' | 'active'
 
 export default function StatusView() {
   const { caseId } = useParams<{ caseId: string }>()
+  const navigate = useNavigate()
   const [status, setStatus] = useState<string>('...')
   const [error, setError] = useState(false)
 
@@ -53,6 +54,18 @@ export default function StatusView() {
       width: '100%',
       boxShadow: shadows.card,
     },
+    backRow: {
+      marginBottom: 10,
+    },
+    backBtn: {
+      border: `1px solid ${colors.border}`,
+      background: '#f8f9fa',
+      color: colors.text,
+      borderRadius: 8,
+      padding: '6px 12px',
+      fontSize: 13,
+      cursor: 'pointer',
+    },
     cardTitle: { fontSize: 20, fontWeight: 700, color: colors.primary, marginBottom: 6 },
     caseIdLabel: { fontSize: 13, color: colors.textMuted, marginBottom: 24 },
     statusRow: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 },
@@ -74,6 +87,11 @@ export default function StatusView() {
       <Navbar />
       <div style={s.content}>
         <div style={s.card}>
+          <div style={s.backRow}>
+            <button style={s.backBtn} onClick={() => navigate('/app')}>
+              ← Volver al chat
+            </button>
+          </div>
           <div style={s.cardTitle}>Estado de tu caso</div>
           <div style={s.caseIdLabel}>Número de referencia: <strong>{caseId}</strong></div>
           {error ? (

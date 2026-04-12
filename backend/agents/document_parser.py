@@ -74,6 +74,7 @@ def _extract_image_text_groq_vision(file_bytes: bytes, filename: str = "doc.jpg"
         }.get(ext, "image/jpeg")
         for model in VISION_MODEL_CANDIDATES:
             try:
+                print(f"[AGENT][DocumentParser] groq_vision.try model={model} filename={filename}")
                 response = client.chat.completions.create(
                     model=model,
                     messages=[{
@@ -97,8 +98,10 @@ def _extract_image_text_groq_vision(file_bytes: bytes, filename: str = "doc.jpg"
                 )
                 content = response.choices[0].message.content or ""
                 if content.strip():
+                    print(f"[AGENT][DocumentParser] groq_vision.ok model={model} text_len={len(content.strip())}")
                     return content
             except Exception:
+                print(f"[AGENT][DocumentParser] groq_vision.fail model={model}")
                 continue
         return ""
     except Exception:
@@ -193,12 +196,15 @@ class DocumentParser:
         filename_lower = filename.lower()
 
         if filename_lower.endswith(".pdf"):
+            print(f"[AGENT][DocumentParser] parse.start filename={filename} type=pdf")
             raw_text = _extract_pdf_text(file_bytes)
             if not raw_text.strip():
                 raw_text = _extract_pdf_as_image(file_bytes)
         elif any(filename_lower.endswith(ext) for ext in (".jpg", ".jpeg", ".png", ".webp", ".tiff", ".bmp")):
+            print(f"[AGENT][DocumentParser] parse.start filename={filename} type=image")
             raw_text = _extract_image_text(file_bytes, filename)
         else:
+            print(f"[AGENT][DocumentParser] parse.start filename={filename} type=plain")
             raw_text = file_bytes.decode("utf-8", errors="ignore")
 
         if not raw_text.strip():
@@ -213,6 +219,10 @@ class DocumentParser:
 
         fields = _parse_with_groq(raw_text, doc_type_hint)
         confidence = _score_extraction(raw_text, fields)
+        print(
+            f"[AGENT][DocumentParser] parse.done filename={filename} "
+            f"raw_len={len(raw_text)} fields={len(fields)} confidence={confidence} blocked={confidence < CONFIDENCE_THRESHOLD}"
+        )
 
         return {
             "raw_text": raw_text[:5000],

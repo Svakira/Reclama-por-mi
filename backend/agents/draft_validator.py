@@ -55,6 +55,10 @@ def validate_draft(draft_text: str, classification: dict) -> dict:
         "critical_failures": list of str,
     }
     """
+    print(
+        f"[AGENT][DraftValidator] start draft_len={len(draft_text)} "
+        f"scenario={classification.get('scenario')}"
+    )
     checks = []
     warnings = []
     critical_failures = []
@@ -114,7 +118,7 @@ def validate_draft(draft_text: str, classification: dict) -> dict:
     total = len(checks)
     valid = len(critical_failures) == 0
 
-    return {
+    result = {
         "valid": valid,
         "passed": passed_count,
         "total": total,
@@ -122,3 +126,8 @@ def validate_draft(draft_text: str, classification: dict) -> dict:
         "warnings": warnings,
         "critical_failures": critical_failures,
     }
+    print(
+        f"[AGENT][DraftValidator] done valid={result['valid']} passed={result['passed']}/{result['total']} "
+        f"warnings={len(result['warnings'])} critical={len(result['critical_failures'])}"
+    )
+    return result

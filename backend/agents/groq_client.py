@@ -3,12 +3,21 @@
 Shared Groq client singleton. Returns a mock in test mode (no GROQ_API_KEY).
 """
 import os
+import time
 from typing import Optional
 
 PRIMARY_MODEL = "llama-3.3-70b-versatile"
 FALLBACK_MODEL = "llama-3.1-8b-instant"
+DEBUG_VERBOSE = os.getenv("DEBUG_VERBOSE", "false").lower() in {"1", "true", "yes", "on"}
 
 _groq = None
+
+
+def _safe_text_preview(text: str) -> str:
+    if DEBUG_VERBOSE:
+        return text
+    flat = " ".join((text or "").split())
+    return flat if len(flat) <= 140 else f"{flat[:140]}... (len={len(flat)})"
 
 
 def get_groq():
@@ -35,6 +44,7 @@ def create_chat_stream(client, messages: list, max_tokens: int = 1024):
         RateLimitError = Exception  # mock mode has no groq package
 
     try:
+        t0 = time.perf_counter()
         return client.chat.completions.create(
             model=PRIMARY_MODEL,
             messages=messages,
@@ -43,6 +53,11 @@ def create_chat_stream(client, messages: list, max_tokens: int = 1024):
         )
     except RateLimitError as e:
         print(f"[GROQ FALLBACK] {PRIMARY_MODEL} rate-limited — retrying with {FALLBACK_MODEL}: {str(e)[:120]}")
+        print(
+            f"[GROQ] stream request model={PRIMARY_MODEL} fallback={FALLBACK_MODEL} "
+            f"elapsed_ms={round((time.perf_counter() - t0) * 1000, 2)} "
+            f"messages={len(messages)}"
+        )
         return client.chat.completions.create(
             model=FALLBACK_MODEL,
             messages=messages,
@@ -100,6 +115,7 @@ class _MockGroq:
 def chat_complete(messages: list, model: str = PRIMARY_MODEL, **kwargs) -> str:
     """Single-call wrapper. Returns content string with rate-limit fallback."""
     client = get_groq()
+    t0 = time.perf_counter()
     try:
         from groq import RateLimitError
     except ImportError:
@@ -111,4 +127,9 @@ def chat_complete(messages: list, model: str = PRIMARY_MODEL, **kwargs) -> str:
         fallback_model = FALLBACK_MODEL if model == PRIMARY_MODEL else model
         print(f"[GROQ FALLBACK] {model} rate-limited — retrying with {fallback_model}: {str(e)[:120]}")
         response = client.chat.completions.create(model=fallback_model, messages=messages, **kwargs)
-    return response.choices[0].message.content
+    content = response.choices[0].message.content
+    print(
+        f"[GROQ] chat_complete model={model} elapsed_ms={round((time.perf_counter() - t0) * 1000, 2)} "
+        f"messages={len(messages)} output={_safe_text_preview(content or '')}"
+    )
+    return content
