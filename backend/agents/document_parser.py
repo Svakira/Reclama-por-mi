@@ -109,12 +109,12 @@ def _extract_image_text_groq_vision(file_bytes: bytes, filename: str = "doc.jpg"
 
 
 def _extract_image_text(file_bytes: bytes, filename: str = "doc.jpg") -> str:
-    """Try OCR first, then Groq vision if OCR yields too little."""
-    text = _extract_image_text_ocr(file_bytes)
-    if len(text.strip()) >= 80:
-        return text
+    """Try vision model first (more reliable), fallback to OCR."""
     vision_text = _extract_image_text_groq_vision(file_bytes, filename)
-    return vision_text if vision_text.strip() else text
+    if len(vision_text.strip()) >= 40:
+        return vision_text
+    text = _extract_image_text_ocr(file_bytes)
+    return text if text.strip() else vision_text
 
 
 def _extract_pdf_as_image(file_bytes: bytes) -> str:

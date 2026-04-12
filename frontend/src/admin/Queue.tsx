@@ -1,10 +1,8 @@
-// frontend/src/admin/Queue.tsx
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/client'
 import AdminLayout from './AdminLayout'
-import Badge from '../components/Badge'
-import { colors, shadows } from '../styles/tokens'
+import { colors, typography } from '../styles/tokens'
 
 const SCENARIO_LABEL: Record<string, string> = {
   A: 'Producto defectuoso',
@@ -13,20 +11,15 @@ const SCENARIO_LABEL: Record<string, string> = {
   UNKNOWN: 'Sin clasificar',
 }
 
-type BadgeStatus = 'pending' | 'active' | 'approved' | 'rejected' | 'ready' | 'blocked' | 'info'
-
-function statusToBadge(status: string): { status: BadgeStatus; label: string } {
-  const map: Record<string, { status: BadgeStatus; label: string }> = {
-    PENDING_REVIEW: { status: 'pending', label: 'Pendiente revisión' },
-    LAWYER_REVIEWING: { status: 'active', label: 'En revisión' },
-    APPROVED: { status: 'approved', label: 'Aprobado' },
-    SUBMITTED_TO_SIC: { status: 'ready', label: 'Enviado SIC' },
-    PENDING_CLAIM_DECISION: { status: 'blocked', label: 'Decisión requerida' },
-    ILLEGIBLE_DOCUMENT_BLOCKED: { status: 'blocked', label: 'Doc. ilegible' },
-    DOCS_REQUESTED: { status: 'info', label: 'Docs. solicitados' },
-    CLOSED: { status: 'info', label: 'Cerrado' },
-  }
-  return map[status] || { status: 'info', label: status.replace(/_/g, ' ') }
+const STATUS_CONFIG: Record<string, { bg: string; color: string; label: string }> = {
+  PENDING_REVIEW: { bg: 'rgba(184,134,11,0.15)', color: colors.warning, label: 'Pendiente revisión' },
+  LAWYER_REVIEWING: { bg: 'rgba(26,58,92,0.15)', color: colors.primary, label: 'En revisión' },
+  APPROVED: { bg: 'rgba(74,103,65,0.15)', color: colors.success, label: 'Aprobado' },
+  SUBMITTED_TO_SIC: { bg: 'rgba(74,103,65,0.15)', color: colors.success, label: 'Enviado SIC' },
+  PENDING_CLAIM_DECISION: { bg: 'rgba(184,134,11,0.15)', color: colors.warning, label: 'Decisión requerida' },
+  ILLEGIBLE_DOCUMENT_BLOCKED: { bg: 'rgba(167,62,62,0.15)', color: colors.danger, label: 'Doc. ilegible' },
+  DOCS_REQUESTED: { bg: 'rgba(26,58,92,0.15)', color: colors.primary, label: 'Docs. solicitados' },
+  CLOSED: { bg: 'rgba(139,134,128,0.15)', color: colors.textMuted, label: 'Cerrado' },
 }
 
 interface Case {
@@ -36,13 +29,15 @@ interface Case {
   priority: number
   case_type: string
   created_at: string
-  validation_flags?: { severity: string }[]
+  product_description?: string
 }
 
 export default function Queue() {
   const [cases, setCases] = useState<Case[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [sortBy, setSortBy] = useState('date')
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -55,181 +50,151 @@ export default function Queue() {
     try {
       const res = await api.get('/cases')
       setCases(res.data)
-    } catch {
-      // handled by axios interceptor
-    }
+    } catch {}
     setLoading(false)
   }
 
   const pendingCount = cases.filter((c) =>
     ['PENDING_REVIEW', 'PENDING_CLAIM_DECISION', 'LAWYER_REVIEWING'].includes(c.status)
   ).length
+  const reviewingCount = cases.filter((c) => c.status === 'LAWYER_REVIEWING').length
+  const approvedCount = cases.filter((c) => ['APPROVED', 'SUBMITTED_TO_SIC'].includes(c.status)).length
+  const approvalRate = cases.length > 0 ? Math.round((approvedCount / cases.length) * 100) : 0
 
   const filteredCases = cases.filter((c) => {
     const q = query.trim().toLowerCase()
+    if (statusFilter !== 'all' && c.status !== statusFilter) return false
     if (!q) return true
     return [c.case_id, c.consumer_name, c.status, c.case_type].join(' ').toLowerCase().includes(q)
   })
 
-  const formatDate = (iso: string) =>
-    new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
+  const sortedCases = [...filteredCases].sort((a, b) => {
+    if (sortBy === 'priority') return b.priority - a.priority
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  })
 
-  const s: Record<string, React.CSSProperties> = {
-    page: { padding: '32px 32px' },
-    header: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      marginBottom: 20,
-    },
-    title: {
-      fontSize: 22,
-      fontWeight: 700,
-      color: colors.text,
-      margin: 0,
-    },
-    subtitle: {
-      marginTop: 6,
-      color: colors.textMuted,
-      fontSize: 14,
-    },
-    assignBtn: {
-      padding: '10px 20px',
-      background: colors.primary,
-      color: '#fff',
-      border: 'none',
-      borderRadius: 8,
-      fontWeight: 600,
-      cursor: 'pointer',
-      fontSize: 13,
-    },
-    countBadge: {
-      background: colors.primary,
-      color: '#fff',
-      borderRadius: 12,
-      padding: '2px 10px',
-      fontSize: 13,
-      fontWeight: 700,
-    },
-    card: {
-      background: colors.surface,
-      border: `1px solid ${colors.border}`,
-      borderRadius: 10,
-      boxShadow: shadows.card,
-      overflow: 'hidden',
-    },
-    filters: {
-      display: 'flex',
-      gap: 12,
-      marginBottom: 14,
-      flexWrap: 'wrap',
-    },
-    searchInput: {
-      minWidth: 360,
-      maxWidth: 480,
-      width: '100%',
-      border: `1px solid ${colors.border}`,
-      borderRadius: 8,
-      padding: '10px 12px',
-      fontSize: 13,
-      outline: 'none',
-      color: colors.text,
-      background: colors.surface,
-    },
-    th: {
-      textAlign: 'left' as const,
-      padding: '12px 16px',
-      fontSize: 12,
-      fontWeight: 600,
-      color: colors.textMuted,
-      textTransform: 'uppercase' as const,
-      letterSpacing: '0.05em',
-      borderBottom: `1px solid ${colors.border}`,
-      background: colors.bg,
-    },
-    td: {
-      padding: '14px 16px',
-      fontSize: 14,
-      color: colors.text,
-      borderBottom: `1px solid ${colors.border}`,
-    },
-    reviewBtn: {
-      background: 'transparent',
-      border: `1px solid ${colors.primary}`,
-      borderRadius: 6,
-      padding: '6px 14px',
-      color: colors.primary,
-      cursor: 'pointer',
-      fontSize: 13,
-      fontWeight: 600,
-    },
-    empty: { textAlign: 'center' as const, color: colors.textMuted, padding: 48 },
-  }
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })
 
   return (
     <AdminLayout pendingCount={pendingCount}>
-      <div style={s.page}>
-        <div style={s.header}>
+      <div style={{ padding: '32px', fontFamily: typography.body }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 }}>
           <div>
-            <h1 style={s.title}>Cola de revisión</h1>
-            <p style={s.subtitle}>Casos pendientes de evaluación legal</p>
+            <h1 style={{ fontSize: 28, fontWeight: 700, color: colors.text, margin: 0 }}>Cola de revisión</h1>
+            <p style={{ fontSize: 14, color: colors.textMuted, marginTop: 4 }}>Casos pendientes de evaluación legal</p>
           </div>
-          <button style={s.assignBtn}>Asignar caso</button>
+          <button style={{
+            padding: '10px 20px',
+            background: colors.primary,
+            color: '#fff',
+            border: 'none',
+            borderRadius: 8,
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontSize: 13,
+            fontFamily: typography.body,
+          }}>
+            Asignar caso
+          </button>
         </div>
 
-        <div style={s.filters}>
-          <input
-            style={s.searchInput}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar por caso, consumidor, estado o escenario"
-          />
-          {pendingCount > 0 && <span style={s.countBadge}>{pendingCount} pendientes</span>}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24, marginBottom: 40 }}>
+          <StatCard label="Pendientes" value={pendingCount} change={`${cases.filter(c => c.status === 'PENDING_REVIEW').length} nuevos`} positive />
+          <StatCard label="En revisión" value={reviewingCount} change={`${reviewingCount} en progreso`} positive />
+          <StatCard label="Aprobados" value={approvedCount} change={`${approvedCount} total`} positive />
+          <StatCard label="Tasa de aprobación" value={`${approvalRate}%`} change="últimos 30 días" positive={approvalRate >= 70} />
         </div>
 
-        <div style={s.card}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, color: colors.text }}>Casos pendientes</h2>
+
+        <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+          <select
+            style={filterStyle}
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="all">Todos los casos</option>
+            <option value="PENDING_REVIEW">Pendiente revisión</option>
+            <option value="LAWYER_REVIEWING">En revisión</option>
+            <option value="APPROVED">Aprobados</option>
+            <option value="ILLEGIBLE_DOCUMENT_BLOCKED">Doc. ilegible</option>
+          </select>
+          <select
+            style={filterStyle}
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+          >
+            <option value="date">Ordenar por fecha</option>
+            <option value="priority">Más urgentes</option>
+          </select>
+        </div>
+
+        <div style={{
+          background: colors.surface,
+          borderRadius: 8,
+          border: `1px solid ${colors.border}`,
+          overflow: 'hidden',
+        }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
-              <tr>
-                <th style={s.th}>Caso</th>
-                <th style={s.th}>Consumidora</th>
-                <th style={s.th}>Escenario</th>
-                <th style={s.th}>Estado</th>
-                <th style={s.th}>Fecha</th>
-                <th style={s.th}>Acción</th>
+              <tr style={{ background: colors.bg, borderBottom: `1px solid ${colors.border}` }}>
+                <th style={thStyle}>Caso</th>
+                <th style={thStyle}>Consumidor/a</th>
+                <th style={thStyle}>Escenario</th>
+                <th style={thStyle}>Estado</th>
+                <th style={thStyle}>Fecha</th>
+                <th style={thStyle}>Acción</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} style={s.empty}>Cargando...</td></tr>
-              ) : filteredCases.length === 0 ? (
-                <tr><td colSpan={6} style={s.empty}>No hay casos en la cola</td></tr>
+                <tr><td colSpan={6} style={emptyStyle}>Cargando...</td></tr>
+              ) : sortedCases.length === 0 ? (
+                <tr><td colSpan={6} style={emptyStyle}>No hay casos en la cola</td></tr>
               ) : (
-                filteredCases.map((c) => {
-                  const badge = statusToBadge(c.status)
+                sortedCases.map((c) => {
+                  const cfg = STATUS_CONFIG[c.status] || { bg: 'rgba(139,134,128,0.15)', color: colors.textMuted, label: c.status.replace(/_/g, ' ') }
                   return (
                     <tr
                       key={c.case_id}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(26,58,92,0.04)')}
+                      style={{ cursor: 'pointer' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = colors.bg)}
                       onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                      onClick={() => navigate(`/admin/cases/${c.case_id}`)}
                     >
-                      <td style={{ ...s.td, fontFamily: 'monospace', fontSize: 12, color: colors.textMuted }}>
-                        #{c.case_id.slice(-6)}
+                      <td style={tdStyle}>
+                        <span style={{ fontWeight: 600, color: colors.primary }}>#{c.case_id.slice(-6)}</span>
                       </td>
-                      <td style={{ ...s.td, fontWeight: 500 }}>{c.consumer_name}</td>
-                      <td style={s.td}>
-                        <span style={{ fontSize: 13, color: colors.textMuted }}>
+                      <td style={tdStyle}>
+                        <span style={{ fontWeight: 500, color: colors.text }}>{c.consumer_name || 'Sin nombre'}</span>
+                      </td>
+                      <td style={tdStyle}>
+                        <span style={{ color: colors.textMuted, fontSize: 12 }}>
                           {SCENARIO_LABEL[c.case_type] || c.case_type}
                         </span>
                       </td>
-                      <td style={s.td}>
-                        <Badge status={badge.status} label={badge.label} />
+                      <td style={tdStyle}>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '6px 12px',
+                          borderRadius: 4,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          background: cfg.bg,
+                          color: cfg.color,
+                        }}>
+                          {cfg.label}
+                        </span>
                       </td>
-                      <td style={{ ...s.td, color: colors.textMuted, fontSize: 13 }}>{formatDate(c.created_at)}</td>
-                      <td style={s.td}>
+                      <td style={{ ...tdStyle, color: colors.textMuted, fontSize: 12 }}>{formatDate(c.created_at)}</td>
+                      <td style={tdStyle}>
                         <button
-                          style={s.reviewBtn}
-                          onClick={() => navigate(`/admin/cases/${c.case_id}`)}
+                          style={actionBtnStyle}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/admin/cases/${c.case_id}`) }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = colors.primary; e.currentTarget.style.color = '#fff' }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = colors.primary }}
                         >
                           Revisar
                         </button>
@@ -244,4 +209,71 @@ export default function Queue() {
       </div>
     </AdminLayout>
   )
+}
+
+function StatCard({ label, value, change, positive }: { label: string; value: string | number; change: string; positive: boolean }) {
+  return (
+    <div style={{
+      background: colors.surface,
+      padding: 24,
+      borderRadius: 8,
+      border: `1px solid ${colors.border}`,
+      transition: 'all 0.3s ease',
+    }}>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: colors.textMuted, letterSpacing: 0.5, marginBottom: 12 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 28, fontWeight: 700, color: colors.primary, marginBottom: 8 }}>
+        {value}
+      </div>
+      <div style={{ fontSize: 12, color: positive ? colors.success : colors.danger }}>
+        {change}
+      </div>
+    </div>
+  )
+}
+
+const thStyle: React.CSSProperties = {
+  padding: '16px',
+  textAlign: 'left',
+  fontWeight: 700,
+  color: '#5C5854',
+  textTransform: 'uppercase',
+  fontSize: 11,
+  letterSpacing: 0.5,
+}
+
+const tdStyle: React.CSSProperties = {
+  padding: '20px 16px',
+  borderBottom: `1px solid ${colors.border}`,
+}
+
+const emptyStyle: React.CSSProperties = {
+  textAlign: 'center',
+  color: colors.textMuted,
+  padding: 48,
+}
+
+const filterStyle: React.CSSProperties = {
+  padding: '10px 12px',
+  border: `1px solid ${colors.border}`,
+  borderRadius: 6,
+  fontSize: 13,
+  background: colors.surface,
+  color: colors.text,
+  cursor: 'pointer',
+  fontFamily: "'Plus Jakarta Sans', sans-serif",
+}
+
+const actionBtnStyle: React.CSSProperties = {
+  padding: '8px 16px',
+  border: `1px solid ${colors.primary}`,
+  background: 'transparent',
+  color: colors.primary,
+  borderRadius: 4,
+  cursor: 'pointer',
+  fontSize: 12,
+  fontWeight: 600,
+  transition: 'all 0.3s ease',
+  fontFamily: "'Plus Jakarta Sans', sans-serif",
 }

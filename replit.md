@@ -46,14 +46,33 @@ JusticIA is an AI-powered legal intake and complaint preparation platform for lo
 - `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM` — Optional for WhatsApp
 - `DEBUG_VERBOSE` — Enable verbose logging
 
+## Document Parsing
+- **Images** (PNG/JPG): Groq Vision model primary (llama-4-scout), Tesseract OCR fallback
+- **PDFs**: pdfplumber primary, PyMuPDF fallback, then render-as-image for scanned PDFs
+- **Structured extraction**: LLM parses raw text into JSON fields (fecha, monto, cedula, etc.)
+- **Confidence gate**: Documents with score < 0.70 are blocked (illegible)
+
+## Admin Panel
+- **Login**: `/admin/login` (demo: abogado@icesi.edu.co / icesi2026)
+- **Queue**: `/admin` — Stats grid + filterable case table with status badges
+- **Case Detail**: `/admin/cases/:id` — Tabbed view (draft, transcript, documents, analysis)
+- **Design**: Dark sidebar (0F1419), warm neutrals, Plus Jakarta Sans font
+
 ## Key Files
 - `backend/main.py` — FastAPI app with SPA catch-all routing
 - `backend/api/pipeline_routes.py` — Main pipeline API
-- `backend/agents/intake_interviewer.py` — KG-aware chat agent
+- `backend/agents/intake_interviewer.py` — KG-aware chat agent (ONLY collects info, no legal opinions)
+- `backend/agents/document_parser.py` — OCR + Vision model document parsing
 - `backend/agents/groq_client.py` — Groq client with retry/backoff
 - `backend/agents/complaint_draft_generator.py` — Formal draft + simple explanation
 - `backend/agents/legal_classifier.py` — KG-powered legal classification
 - `backend/agents/draft_validator.py` — Deterministic draft validation
+- `backend/agents/case_packager.py` — Case assembly + Firestore save
 - `backend/api/notify_routes.py` — WhatsApp/Twilio notifications
+- `backend/api/cases_routes.py` — Admin case management API
 - `backend/kg/legal_graph.json` — Knowledge graph (articles, templates, scenarios)
 - `frontend/src/app/ChatView.tsx` — Main chat UI
+- `frontend/src/admin/Queue.tsx` — Admin queue with stats grid
+- `frontend/src/admin/CaseDetail.tsx` — Case detail view
+- `frontend/src/components/Sidebar.tsx` — Dark sidebar navigation
+- `frontend/src/styles/tokens.ts` — Design tokens (colors, typography, shadows)

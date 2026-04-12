@@ -1,4 +1,3 @@
-// frontend/src/admin/AdminLayout.tsx
 import React from 'react'
 import Sidebar from '../components/Sidebar'
 import { colors } from '../styles/tokens'
@@ -9,23 +8,20 @@ interface AdminLayoutProps {
 }
 
 export default function AdminLayout({ children, pendingCount = 0 }: AdminLayoutProps) {
-  const s: React.CSSProperties = {
-    display: 'flex',
-    height: '100vh',
-    background: colors.bg,
-    overflow: 'hidden'
-  }
-  const main: React.CSSProperties = {
-    flex: 1,
-    overflowY: 'auto',
-    background: colors.bg,
-    marginLeft: 0,
-  }
-
   return (
-    <div style={s}>
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: '260px 1fr',
+      minHeight: '100vh',
+    }}>
       <Sidebar pendingCount={pendingCount} />
-      <main style={main}>{children}</main>
+      <main style={{
+        overflowY: 'auto',
+        background: colors.bg,
+        height: '100vh',
+      }}>
+        {children}
+      </main>
     </div>
   )
 }

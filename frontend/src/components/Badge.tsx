@@ -1,17 +1,15 @@
-// frontend/src/components/Badge.tsx
 import React from 'react'
-import { colors } from '../styles/tokens'
 
 type BadgeStatus = 'pending' | 'active' | 'approved' | 'rejected' | 'ready' | 'blocked' | 'info'
 
 const STATUS_COLORS: Record<BadgeStatus, string> = {
-  pending: colors.warning,
-  active: colors.primary,
-  approved: colors.success,
-  rejected: colors.danger,
-  ready: colors.success,
-  blocked: colors.danger,
-  info: '#6c757d',
+  pending: '#B8860B',
+  active: '#1A3A5C',
+  approved: '#4A6741',
+  rejected: '#A73E3E',
+  ready: '#4A6741',
+  blocked: '#A73E3E',
+  info: '#8B8680',
 }
 
 interface BadgeProps {
@@ -25,11 +23,11 @@ export default function Badge({ status, label }: BadgeProps) {
     display: 'inline-block',
     background: color + '22',
     color,
-    border: `1px solid ${color}55`,
     borderRadius: 4,
-    padding: '3px 8px',
-    fontSize: 12,
-    fontWeight: 600,
+    padding: '6px 12px',
+    fontSize: 11,
+    fontWeight: 700,
+    textTransform: 'uppercase',
     whiteSpace: 'nowrap',
   }
   return <span style={style}>{label}</span>

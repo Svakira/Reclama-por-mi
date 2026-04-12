@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JusticIA - Detalle del Caso</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1A3A5C;
+            --primary-light: #2C5282;
+            --accent: #5B4C8A;
+            --secondary: #8B7355;
+            --dark-bg: #0F1419;
+            --neutral-50: #F7F6F4;
+            --neutral-100: #EEEBE5;
+            --neutral-200: #E0DCD5;
+            --neutral-600: #8B8680;
+            --neutral-800: #5C5854;
+            --white: #FFFFFF;
+            --error: #A73E3E;
+            --success: #4A6741;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--neutral-50);
+            color: var(--dark-bg);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Header */
+        header {
+            background: var(--white);
+            border-bottom: 1px solid var(--neutral-100);
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+
+        header .container {
+            padding: 0 2rem;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .back-link:hover {
+            gap: 0.75rem;
+        }
+
+        .header-main {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+        }
+
+        .header-title h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-light);
+        }
+
+        .btn-secondary {
+            background: var(--white);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .btn-danger {
+            background: var(--white);
+            color: var(--error);
+            border: 1px solid var(--error);
+        }
+
+        .btn-danger:hover {
+            background: var(--error);
+            color: var(--white);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.4rem 0.75rem;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .status-pending {
+            background: rgba(184, 134, 11, 0.15);
+            color: var(--secondary);
+        }
+
+        .header-meta {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2rem;
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .meta-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--neutral-600);
+            letter-spacing: 0.5px;
+        }
+
+        .meta-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--dark-bg);
+        }
+
+        /* Content Grid */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+        }
+
+        /* Card */
+        .card {
+            background: var(--white);
+            border-radius: 8px;
+            border: 1px solid var(--neutral-100);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--dark-bg);
+        }
+
+        /* Consumer Info */
+        .consumer-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--neutral-100);
+            margin-bottom: 1.5rem;
+        }
+
+        .consumer-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 6px;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .consumer-details h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .consumer-details p {
+            font-size: 12px;
+            color: var(--neutral-600);
+        }
+
+        .info-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .info-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--neutral-600);
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.5px;
+        }
+
+        .info-value {
+            font-size: 14px;
+            color: var(--dark-bg);
+        }
+
+        .info-value a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .info-value a:hover {
+            text-decoration: underline;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid var(--neutral-100);
+            margin-bottom: 2rem;
+        }
+
+        .tab {
+            padding: 1rem 1.5rem;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--neutral-600);
+            transition: all 0.3s ease;
+            position: relative;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .tab:hover {
+            color: var(--dark-bg);
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Fact Item */
+        .fact-item {
+            padding: 1.25rem;
+            background: var(--neutral-50);
+            border-left: 3px solid var(--primary);
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+
+        .fact-title {
+            font-weight: 700;
+            font-size: 13px;
+            color: var(--dark-bg);
+            margin-bottom: 0.5rem;
+        }
+
+        .fact-description {
+            font-size: 14px;
+            color: var(--neutral-800);
+            line-height: 1.6;
+        }
+
+        /* Document Section */
+        .document-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--neutral-50);
+            border-radius: 6px;
+            margin-bottom: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .document-item:hover {
+            background: var(--neutral-100);
+        }
+
+        .document-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 4px;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-size: 13px;
+            flex-shrink: 0;
+            font-weight: 700;
+        }
+
+        .document-info {
+            flex: 1;
+        }
+
+        .document-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--dark-bg);
+        }
+
+        .document-size {
+            font-size: 12px;
+            color: var(--neutral-600);
+        }
+
+        .document-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .icon-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            border: 1px solid var(--neutral-100);
+            background: var(--white);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            transition: all 0.3s ease;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 700;
+        }
+
+        .icon-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        /* Sidebar */
+        .side-card {
+            background: var(--white);
+            border-radius: 8px;
+            border: 1px solid var(--neutral-100);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .side-card-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--dark-bg);
+        }
+
+        .side-card-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--neutral-100);
+        }
+
+        .side-card-item:last-child {
+            border-bottom: none;
+        }
+
+        .side-card-label {
+            font-size: 12px;
+            color: var(--neutral-600);
+            font-weight: 500;
+        }
+
+        .side-card-value {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--dark-bg);
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--neutral-100);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 60%;
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding-left: 1.5rem;
+        }
+
+        .timeline-item {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -1.75rem;
+            top: 2px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: 2px solid var(--white);
+            box-shadow: 0 0 0 1px var(--neutral-100);
+        }
+
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            left: -1.38rem;
+            top: 8px;
+            width: 1px;
+            height: calc(100% + 1.5rem);
+            background: var(--neutral-100);
+        }
+
+        .timeline-item:last-child::after {
+            display: none;
+        }
+
+        .timeline-time {
+            font-size: 11px;
+            color: var(--neutral-600);
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .timeline-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--dark-bg);
+            margin-bottom: 0.25rem;
+        }
+
+        .timeline-description {
+            font-size: 12px;
+            color: var(--neutral-600);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header-meta {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .card {
+                padding: 1.5rem;
+            }
+
+            .header-main {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .header-actions {
+                width: 100%;
+            }
+
+            .btn {
+                flex: 1;
+            }
+
+            .header-meta {
+                grid-template-columns: 1fr;
+            }
+
+            .tabs {
+                overflow-x: auto;
+            }
+
+            .tab {
+                padding: 0.75rem 1rem;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <a href="#" class="back-link">Volver</a>
+            
+            <div class="header-main">
+                <div class="header-title">
+                    <h1>Rosa Inés Morales Vargas</h1>
+                    <span class="status-badge status-pending">Pendiente revisión</span>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary">Aprobar y enviar SIC</button>
+                    <button class="btn btn-secondary">Editar caso</button>
+                    <button class="btn btn-danger">Rechazar</button>
+                </div>
+            </div>
+
+            <div class="header-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Caso ID</span>
+                    <span class="meta-value">#26-001</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Tipo de reclamación</span>
+                    <span class="meta-value">Producto defectuoso</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Fecha de creación</span>
+                    <span class="meta-value">11 de abril, 2026</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Proveedor</span>
+                    <span class="meta-value">TecnoPlus S.A.S.</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="content-grid">
+            <!-- Main Column -->
+            <div>
+                <!-- Consumer Card -->
+                <div class="card">
+                    <div class="card-title">Datos del consumidor</div>
+                    
+                    <div class="consumer-header">
+                        <div class="consumer-avatar">RM</div>
+                        <div class="consumer-details">
+                            <h3>Rosa Inés Morales Vargas</h3>
+                            <p>CC: 32.456.789</p>
+                        </div>
+                    </div>
+
+                    <div class="info-group">
+                        <div class="info-label">Dirección</div>
+                        <div class="info-value">Calle 15 # 8-32, Barrio San Nicolás, Cali, Valle del Cauca</div>
+                    </div>
+
+                    <div class="info-group">
+                        <div class="info-label">Teléfono</div>
+                        <div class="info-value">+57 301 567 8901</div>
+                    </div>
+
+                    <div class="info-group">
+                        <div class="info-label">Correo electrónico</div>
+                        <div class="info-value"><a href="mailto:rosa@email.com">rosa@email.com</a></div>
+                    </div>
+                </div>
+
+                <!-- Details Card -->
+                <div class="card">
+                    <div class="card-title">Detalles de la reclamación</div>
+
+                    <div class="tabs">
+                        <button class="tab active">Borrador SIC</button>
+                        <button class="tab">Relato Original</button>
+                        <button class="tab">Documentos</button>
+                        <button class="tab">Análisis IA</button>
+                    </div>
+
+                    <div class="tab-content active">
+                        <div class="fact-item">
+                            <div class="fact-title">Hechos principales</div>
+                            <div class="fact-description">
+                                La suscrita adquirió un celular Samsung Galaxy A54, IMEI 352547113456789, el día 15 de octubre de 2025 en el establecimiento TecnoPlus S.A.S., por valor de $1.200.000 COP. El dispositivo presentó fallos de funcionamiento tres meses después de la compra, específicamente en la cámara y batería.
+                            </div>
+                        </div>
+
+                        <div class="fact-item">
+                            <div class="fact-title">Acciones realizadas</div>
+                            <div class="fact-description">
+                                Se intentó reparación en el servicio técnico autorizado sin resultados positivos. El proveedor se rehusó a cambiar el equipo argumentando que el daño no está cubierto por garantía, aunque la suscrita manifiesta que nunca causó daño físico al equipo.
+                            </div>
+                        </div>
+
+                        <div class="fact-item">
+                            <div class="fact-title">Pretensión</div>
+                            <div class="fact-description">
+                                La reclamante solicita la devolución íntegra del valor pagado ($1.200.000 COP) o el cambio del dispositivo por uno nuevo de características similares, así como el reconocimiento de perjuicios causados por la deficiencia del servicio.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-content">
+                        <p style="color: var(--neutral-600); font-size: 14px;">Relato original pendiente de visualización.</p>
+                    </div>
+
+                    <div class="tab-content">
+                        <p style="margin-bottom: 1.5rem; color: var(--neutral-600); font-size: 12px;">3 documentos adjuntos</p>
+                        
+                        <div class="document-item">
+                            <div class="document-icon">PDF</div>
+                            <div class="document-info">
+                                <div class="document-name">Factura_compra_Samsung.pdf</div>
+                                <div class="document-size">2.4 MB</div>
+                            </div>
+                            <div class="document-actions">
+                                <button class="icon-btn">Ver</button>
+                                <button class="icon-btn">Descargar</button>
+                            </div>
+                        </div>
+
+                        <div class="document-item">
+                            <div class="document-icon">PDF</div>
+                            <div class="document-info">
+                                <div class="document-name">Reporte_servicio_tecnico.pdf</div>
+                                <div class="document-size">1.8 MB</div>
+                            </div>
+                            <div class="document-actions">
+                                <button class="icon-btn">Ver</button>
+                                <button class="icon-btn">Descargar</button>
+                            </div>
+                        </div>
+
+                        <div class="document-item">
+                            <div class="document-icon">IMG</div>
+                            <div class="document-info">
+                                <div class="document-name">Fotos_celular_defectuoso.jpg</div>
+                                <div class="document-size">5.2 MB</div>
+                            </div>
+                            <div class="document-actions">
+                                <button class="icon-btn">Ver</button>
+                                <button class="icon-btn">Descargar</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-content">
+                        <div style="background: var(--neutral-50); padding: 1.5rem; border-radius: 6px; border-left: 3px solid var(--primary);">
+                            <p style="font-size: 13px; color: var(--dark-bg); line-height: 1.8;">
+                                <strong>Análisis de validez:</strong> Este caso tiene una probabilidad de <strong>87% de ser válido</strong> ante la SIC. El consumidor cuenta con evidencia documentada del defecto del producto y ha seguido los pasos legales correctos. Se recomienda <strong>APROBAR</strong> esta reclamación.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div>
+                <!-- Proveedor Card -->
+                <div class="side-card">
+                    <div class="side-card-title">Información del proveedor</div>
+                    
+                    <div class="side-card-item">
+                        <span class="side-card-label">Razón Social</span>
+                        <span class="side-card-value">TecnoPlus S.A.S.</span>
+                    </div>
+
+                    <div class="side-card-item">
+                        <span class="side-card-label">NIT</span>
+                        <span class="side-card-value">900.123.456-7</span>
+                    </div>
+
+                    <div class="side-card-item">
+                        <span class="side-card-label">Dirección</span>
+                        <span class="side-card-value">Carrera 9 # 14-45, Cali</span>
+                    </div>
+
+                    <div class="side-card-item">
+                        <span class="side-card-label">Teléfono</span>
+                        <span class="side-card-value">+57 (2) 5551234</span>
+                    </div>
+                </div>
+
+                <!-- Progress Card -->
+                <div class="side-card">
+                    <div class="side-card-title">Progreso del caso</div>
+                    
+                    <div style="margin-bottom: 1.5rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span class="side-card-label">Completitud</span>
+                            <span class="side-card-value" style="color: var(--success);">92%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 92%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-time">Hoy, 14:32</div>
+                            <div class="timeline-title">Documentos completos</div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-time">Ayer, 09:15</div>
+                            <div class="timeline-title">Análisis IA completado</div>
+                            <div class="timeline-description">Probabilidad: 87%</div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-time">2 días atrás</div>
+                            <div class="timeline-title">Caso iniciado</div>
+                            <div class="timeline-description">Rosa Inés Morales</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="side-card">
+                    <div class="side-card-title">Estadísticas</div>
+                    
+                    <div class="side-card-item">
+                        <span class="side-card-label">Similares aprobados</span>
+                        <span class="side-card-value">156</span>
+                    </div>
+
+                    <div class="side-card-item">
+                        <span class="side-card-label">Tasa de éxito</span>
+                        <span class="side-card-value" style="color: var(--success);">87%</span>
+                    </div>
+
+                    <div class="side-card-item">
+                        <span class="side-card-label">Tiempo promedio</span>
+                        <span class="side-card-value">45 días</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -93,7 +93,7 @@ export default function CaseDetail() {
     if (!caseId) return
     Promise.all([
       api.get(`/cases/${caseId}`),
-      api.get(`/drafts/${caseId}/current`),
+      api.get(`/cases/${caseId}/draft`),
     ]).then(([caseRes, draftRes]) => {
       setCaseData(caseRes.data)
       setDraft(draftRes.data.content || '')
@@ -110,7 +110,7 @@ export default function CaseDetail() {
   async function saveDraft() {
     setDraftLoading(true)
     try {
-      await api.put(`/drafts/${caseId}/current`, { content: draft, is_auto_save: false })
+      await api.put(`/cases/${caseId}/draft`, { content: draft })
       showToast('Borrador guardado', true)
     } catch {
       showToast('Error al guardar', false)
@@ -196,7 +196,7 @@ export default function CaseDetail() {
       gap: 16,
       marginBottom: 14,
     },
-    title: { margin: 0, fontSize: 28, fontWeight: 700, color: colors.text },
+    title: { margin: 0, fontSize: 28, fontWeight: 700, color: colors.text, marginBottom: 8 },
     headerActions: { display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' },
     metaGrid: {
       display: 'grid',

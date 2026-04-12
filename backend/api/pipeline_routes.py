@@ -242,8 +242,13 @@ def _handle_whatsapp_response(session: dict, message: str) -> dict:
 
         try:
             from backend.api.notify_routes import _get_twilio_client, WHATSAPP_FROM, EVENT_MESSAGES
+            consumer_name = (
+                (session.get("classification") or {}).get("consumer_name")
+                or session.get("document_fields", {}).get("nombre_consumidor")
+                or "Consumidor"
+            )
             msg_text = EVENT_MESSAGES["CASE_CREATED"].format(
-                name=session.get("document_fields", {}).get("nombre_consumidor", "Consumidor"),
+                name=consumer_name,
                 case_id=session["case_id"],
             )
             client = _get_twilio_client()
@@ -442,7 +447,12 @@ async def finalize_pipeline(body: dict):
         formal_draft=draft_formal,
     )
 
-    consumer_name = fields.get("nombre_consumidor", "Consumidor")
+    intake_class_pre = session["classification"] or {}
+    consumer_name = (
+        fields.get("nombre_consumidor")
+        or intake_class_pre.get("consumer_name")
+        or "Consumidor"
+    )
     t_simple = time.perf_counter()
     draft_simple = generate_simple_explanation(draft_formal, consumer_name)
     _pipeline_log(

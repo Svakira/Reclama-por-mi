@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JusticIA - Panel del Abogado</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1A3A5C;
+            --primary-light: #2C5282;
+            --accent: #5B4C8A;
+            --secondary: #8B7355;
+            --dark-bg: #0F1419;
+            --neutral-50: #F7F6F4;
+            --neutral-100: #EEEBE5;
+            --neutral-200: #E0DCD5;
+            --neutral-600: #8B8680;
+            --neutral-800: #5C5854;
+            --white: #FFFFFF;
+            --error: #A73E3E;
+            --success: #4A6741;
+            --warning: #B8860B;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--neutral-50);
+            color: var(--dark-bg);
+            line-height: 1.6;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: var(--dark-bg);
+            color: var(--white);
+            padding: 1.5rem;
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 260px;
+            overflow-y: auto;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .sidebar-logo-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--primary);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .nav-section {
+            margin-bottom: 2.5rem;
+        }
+
+        .nav-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 1rem;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--white);
+        }
+
+        .nav-item.active {
+            background: var(--primary);
+            color: var(--white);
+            border-color: var(--primary);
+        }
+
+        .user-section {
+            position: absolute;
+            bottom: 1.5rem;
+            left: 1.5rem;
+            right: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        .user-details {
+            flex: 1;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .user-role {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .logout-btn {
+            width: 100%;
+            padding: 0.75rem;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .logout-btn:hover {
+            border-color: var(--error);
+            color: var(--error);
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 260px;
+            padding: 2rem;
+        }
+
+        /* Header */
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+        }
+
+        .content-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--dark-bg);
+        }
+
+        .content-header p {
+            font-size: 14px;
+            color: var(--neutral-600);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn-primary {
+            padding: 10px 20px;
+            background: var(--primary);
+            color: var(--white);
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 13px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-light);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .stat-card {
+            background: var(--white);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--neutral-100);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--neutral-200);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--neutral-600);
+            margin-bottom: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-change {
+            font-size: 12px;
+            color: var(--success);
+        }
+
+        .stat-change.negative {
+            color: var(--error);
+        }
+
+        /* Table Section */
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--dark-bg);
+        }
+
+        .filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-select {
+            padding: 10px 12px;
+            border: 1px solid var(--neutral-100);
+            border-radius: 6px;
+            font-size: 13px;
+            background: var(--white);
+            color: var(--dark-bg);
+            cursor: pointer;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .table-container {
+            background: var(--white);
+            border-radius: 8px;
+            border: 1px solid var(--neutral-100);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        thead {
+            background: var(--neutral-50);
+            border-bottom: 1px solid var(--neutral-100);
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 700;
+            color: var(--neutral-800);
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 1.25rem 1rem;
+            border-bottom: 1px solid var(--neutral-100);
+        }
+
+        tbody tr:hover {
+            background: var(--neutral-50);
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .case-id {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .consumer-name {
+            font-weight: 500;
+            color: var(--dark-bg);
+        }
+
+        .scenario {
+            color: var(--neutral-600);
+            font-size: 12px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.4rem 0.75rem;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .status-pending {
+            background: rgba(184, 134, 11, 0.15);
+            color: var(--warning);
+        }
+
+        .status-review {
+            background: rgba(26, 58, 92, 0.15);
+            color: var(--primary);
+        }
+
+        .status-approved {
+            background: rgba(74, 103, 65, 0.15);
+            color: var(--success);
+        }
+
+        .status-rejected {
+            background: rgba(167, 62, 62, 0.15);
+            color: var(--error);
+        }
+
+        .date-text {
+            color: var(--neutral-600);
+            font-size: 12px;
+        }
+
+        .action-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--primary);
+            background: transparent;
+            color: var(--primary);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .action-btn:hover {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .approve-btn {
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        .approve-btn:hover {
+            background: var(--success);
+            color: var(--white);
+        }
+
+        .reject-btn {
+            border-color: var(--error);
+            color: var(--error);
+        }
+
+        .reject-btn:hover {
+            background: var(--error);
+            color: var(--white);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding-bottom: 100px;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .user-section {
+                position: relative;
+                bottom: auto;
+                left: auto;
+                right: auto;
+                margin-top: 1rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filters {
+                flex-direction: column;
+            }
+
+            .filter-select {
+                width: 100%;
+            }
+
+            .table-container {
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <div class="sidebar-logo-icon">JI</div>
+                JusticIA
+            </div>
+
+            <nav class="nav-section">
+                <div class="nav-section-title">Panel</div>
+                <a class="nav-item active">Cola de revisión</a>
+                <a class="nav-item">Aprobados</a>
+                <a class="nav-item">Rechazados</a>
+            </nav>
+
+            <nav class="nav-section">
+                <div class="nav-section-title">Gestión</div>
+                <a class="nav-item">Mis casos</a>
+                <a class="nav-item">Reportes</a>
+                <a class="nav-item">Configuración</a>
+            </nav>
+
+            <div class="user-section">
+                <div class="user-info">
+                    <div class="user-avatar">JM</div>
+                    <div class="user-details">
+                        <div class="user-name">Juan Martínez</div>
+                        <div class="user-role">Abogado • ICESI</div>
+                    </div>
+                </div>
+                <button class="logout-btn">Cerrar sesión</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="content-header">
+                <div>
+                    <h1>Cola de revisión</h1>
+                    <p>Casos pendientes de evaluación legal</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-primary">Asignar caso</button>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Pendientes</div>
+                    <div class="stat-value">12</div>
+                    <div class="stat-change">↑ 3 nuevos hoy</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">En revisión</div>
+                    <div class="stat-value">8</div>
+                    <div class="stat-change">4 en progreso</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Aprobados</div>
+                    <div class="stat-value">156</div>
+                    <div class="stat-change">↑ 12 este mes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Tasa de aprobación</div>
+                    <div class="stat-value">87%</div>
+                    <div class="stat-change negative">↓ 2% últimos 7 días</div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <h2 class="section-title">Casos pendientes</h2>
+            <div class="filters">
+                <select class="filter-select">
+                    <option>Todos los casos</option>
+                    <option>Producto defectuoso</option>
+                    <option>Servicio deficiente</option>
+                    <option>Publicidad engañosa</option>
+                </select>
+                <select class="filter-select">
+                    <option>Ordenar por fecha</option>
+                    <option>Más recientes</option>
+                    <option>Más antiguos</option>
+                    <option>Más urgentes</option>
+                </select>
+            </div>
+
+            <!-- Table -->
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Caso</th>
+                            <th>Consumidor/a</th>
+                            <th>Escenario</th>
+                            <th>Estado</th>
+                            <th>Fecha</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="case-id">#26-001</span></td>
+                            <td><span class="consumer-name">Rosa Inés Morales Vargas</span></td>
+                            <td><span class="scenario">Producto defectuoso (Samsung Galaxy A54)</span></td>
+                            <td><span class="status-badge status-pending">Pendiente revisión</span></td>
+                            <td><span class="date-text">11 de abr</span></td>
+                            <td>
+                                <button class="action-btn">Revisar</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="case-id">#26-002</span></td>
+                            <td><span class="consumer-name">Carlos Alberto López</span></td>
+                            <td><span class="scenario">Servicio de telefonía deficiente</span></td>
+                            <td><span class="status-badge status-pending">Pendiente revisión</span></td>
+                            <td><span class="date-text">10 de abr</span></td>
+                            <td>
+                                <button class="action-btn">Revisar</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="case-id">#26-003</span></td>
+                            <td><span class="consumer-name">María Patricia Gómez</span></td>
+                            <td><span class="scenario">Facturación errónea</span></td>
+                            <td><span class="status-badge status-review">En revisión</span></td>
+                            <td><span class="date-text">9 de abr</span></td>
+                            <td>
+                                <button class="action-btn">Ver más</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="case-id">#26-004</span></td>
+                            <td><span class="consumer-name">Jorge Enrique Pérez</span></td>
+                            <td><span class="scenario">Producto con defecto de fábrica</span></td>
+                            <td><span class="status-badge status-pending">Pendiente revisión</span></td>
+                            <td><span class="date-text">8 de abr</span></td>
+                            <td>
+                                <button class="action-btn">Revisar</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="case-id">#26-005</span></td>
+                            <td><span class="consumer-name">Ana Cristina Ruiz</span></td>
+                            <td><span class="scenario">Publicidad engañosa</span></td>
+                            <td><span class="status-badge status-approved">Aprobado</span></td>
+                            <td><span class="date-text">7 de abr</span></td>
+                            <td>
+                                <button class="action-btn approve-btn">Enviar SIC</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
