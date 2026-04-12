@@ -1,5 +1,6 @@
 # backend/main.py
-import os
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -40,7 +41,8 @@ async def health():
     return {"status": "ok"}
 
 
-# Serve React frontend (built to frontend/dist) — Replit production mode
-_frontend_dist = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
-if os.path.isdir(_frontend_dist):
-    app.mount("/", StaticFiles(directory=_frontend_dist, html=True), name="frontend")
+# Serve React frontend only when the full build output exists.
+_frontend_dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+_frontend_index = _frontend_dist / "index.html"
+if _frontend_dist.is_dir() and _frontend_index.is_file():
+    app.mount("/", StaticFiles(directory=str(_frontend_dist), html=True), name="frontend")
