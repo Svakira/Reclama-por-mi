@@ -52,8 +52,8 @@ export default function ChatView() {
       const res = await api.post('/pipeline/message', { session_id: sessionId, message: text })
       setMessages((m) => [...m, { role: 'assistant', text: res.data.agent_reply }])
       setStage(res.data.stage)
-      if (res.data.next_action === 'upload_document') {
-        setMessages((m) => [...m, { role: 'assistant', text: 'Por favor sube el documento solicitado usando el botón de adjuntar.' }])
+      if (res.data.stage === 'COMPLETE' && res.data.case_id) {
+        setCaseId(res.data.case_id)
       }
     } catch {
       setMessages((m) => [...m, { role: 'assistant', text: 'Hubo un error. Por favor intenta de nuevo.' }])
@@ -69,21 +69,36 @@ export default function ChatView() {
     const form = new FormData()
     form.append('session_id', sessionId)
     form.append('file', file)
-    form.append('doc_type', 'factura')
+    form.append('doc_type', 'auto')
     try {
       const res = await api.post('/pipeline/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } })
       if (res.data.blocked) {
-        setMessages((m) => [...m, { role: 'assistant', text: 'No pude leer bien ese documento. Un abogado lo revisará manualmente.' }])
+        setMessages((m) => [...m, { role: 'assistant', text: res.data.message || 'No pude leer bien ese documento. Intenta subir una foto m\u00e1s clara.' }])
       } else {
-        setCaseId(res.data.case_id)
-        setStage('COMPLETE')
-        setMessages((m) => [...m, { role: 'assistant', text: res.data.simple_explanation || `Tu caso fue procesado. Número de referencia: ${res.data.case_id}` }])
+        setStage(res.data.stage || 'DOCS_NEEDED')
+        setMessages((m) => [...m, { role: 'assistant', text: res.data.message }])
       }
     } catch {
       setMessages((m) => [...m, { role: 'assistant', text: 'Error al subir el documento. Por favor intenta de nuevo.' }])
     }
     setUploading(false)
     if (fileRef.current) fileRef.current.value = ''
+  }
+
+  async function finalizePipeline() {
+    if (!sessionId) return
+    setLoading(true)
+    setMessages((m) => [...m, { role: 'assistant', text: 'Procesando tu reclamaci\u00f3n... Esto puede tomar unos segundos.' }])
+    try {
+      const res = await api.post('/pipeline/finalize', { session_id: sessionId })
+      setCaseId(res.data.case_id)
+      setStage(res.data.stage || 'WHATSAPP_OPTIN')
+      setMessages((m) => [...m, { role: 'assistant', text: res.data.message || res.data.simple_explanation || `Tu caso fue registrado: ${res.data.case_id}` }])
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail || 'Error al procesar el caso. Por favor intenta de nuevo.'
+      setMessages((m) => [...m, { role: 'assistant', text: detail }])
+    }
+    setLoading(false)
   }
 
   function scrollToChat() {
@@ -456,10 +471,9 @@ export default function ChatView() {
                 <div key={i} style={m.role === 'assistant' ? s.bubbleAssistant : s.bubbleUser}>{m.text}</div>
               ))}
               {loading && <div style={s.bubbleAssistant}>Escribiendo...</div>}
-              {caseId && (
+              {caseId && stage === 'COMPLETE' && (
                 <div style={s.caseBox}>
-                  Caso registrado: <strong>{caseId}</strong><br />
-                  Un abogado revisará tu reclamación. Te avisaremos por WhatsApp.
+                  Caso registrado: <strong>{caseId}</strong>
                 </div>
               )}
               <div ref={bottomRef} />
@@ -467,6 +481,17 @@ export default function ChatView() {
 
             {stage !== 'COMPLETE' && (
               <div style={s.chatInputGroup}>
+                {stage === 'DOCS_NEEDED' && (
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', width: '100%' }}>
+                    <button
+                      style={{ ...s.sendBtn, flex: 1, padding: '0.6rem 1rem', fontSize: '0.85rem', background: '#2e7d32' }}
+                      onClick={finalizePipeline}
+                      disabled={loading}
+                    >
+                      Procesar mi reclamaci&oacute;n
+                    </button>
+                  </div>
+                )}
                 <input
                   ref={fileRef}
                   type="file"
@@ -476,20 +501,26 @@ export default function ChatView() {
                 />
 
                 <div style={s.chatInputShell}>
-                  <button
-                    style={s.attachBtn}
-                    onClick={() => fileRef.current?.click()}
-                    disabled={uploading}
-                    title="Adjuntar documento"
-                    aria-label="Adjuntar documento"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.2-9.19a4 4 0 115.66 5.66l-9.2 9.2a2 2 0 11-2.83-2.83l8.49-8.48" /></svg>
-                  </button>
+                  {(stage === 'DOCS_NEEDED' || stage === 'INTAKE') && (
+                    <button
+                      style={s.attachBtn}
+                      onClick={() => fileRef.current?.click()}
+                      disabled={uploading}
+                      title="Adjuntar documento"
+                      aria-label="Adjuntar documento"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.2-9.19a4 4 0 115.66 5.66l-9.2 9.2a2 2 0 11-2.83-2.83l8.49-8.48" /></svg>
+                    </button>
+                  )}
                   <input
                     style={s.chatInput}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Escribe tu mensaje..."
+                    placeholder={
+                      stage === 'DOCS_NEEDED' ? 'Sube m\u00e1s documentos o escribe "listo"...'
+                      : stage === 'WHATSAPP_OPTIN' ? 'Escribe tu n\u00famero de WhatsApp o "no"...'
+                      : 'Escribe tu mensaje...'
+                    }
                     onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
                     disabled={loading}
                   />

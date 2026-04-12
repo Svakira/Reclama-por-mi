@@ -3,8 +3,9 @@
 Public-facing pipeline API used by Rosa's /app interface.
 
 POST /api/pipeline/start          — Start intake session
-POST /api/pipeline/message        — Send message in conversation
-POST /api/pipeline/upload         — Upload document
+POST /api/pipeline/message        — Send message in conversation (handles all stages)
+POST /api/pipeline/upload         — Upload document (parse only, no full pipeline)
+POST /api/pipeline/finalize       — Finalize: run full pipeline after docs collected
 POST /api/pipeline/transcribe     — Transcribe audio (Groq Whisper)
 GET  /api/pipeline/session/{id}   — Get session state
 """
@@ -29,25 +30,35 @@ from backend.models.case_models import IntakeRequest
 
 router = APIRouter()
 
-# In-memory session store (sessions are transient; case data goes to Firestore)
 _sessions: dict[str, dict] = {}
 DEBUG_VERBOSE = os.getenv("DEBUG_VERBOSE", "false").lower() in {"1", "true", "yes", "on"}
+
+REQUIRED_DOCS_BY_SCENARIO = {
+    "A": ["factura", "evidencia_defecto"],
+    "B": ["extracto_bancario", "soporte_cobro"],
+    "C": ["factura_servicio", "radicado_pqr"],
+}
+
+DOC_LABELS = {
+    "factura": "factura o comprobante de compra",
+    "evidencia_defecto": "foto o evidencia del defecto del producto",
+    "extracto_bancario": "extracto bancario donde aparece el cobro",
+    "soporte_cobro": "soporte del cobro indebido",
+    "factura_servicio": "factura del servicio de telecomunicaciones",
+    "radicado_pqr": "radicado de la PQR ante el operador",
+}
 
 
 def _summarize_for_log(value):
     if DEBUG_VERBOSE:
         return value
-
     if isinstance(value, str):
         flat = " ".join(value.split())
         return flat if len(flat) <= 180 else f"{flat[:180]}... (len={len(flat)})"
-
     if isinstance(value, dict):
         return {"_type": "dict", "keys": list(value.keys())[:12], "size": len(value)}
-
     if isinstance(value, list):
         return {"_type": "list", "len": len(value)}
-
     return value
 
 
@@ -72,17 +83,54 @@ def _get_or_create_session(session_id: str) -> dict:
             "document_confidence": 1.0,
             "classification": None,
             "case_id": None,
+            "uploaded_docs": [],
+            "whatsapp_number": None,
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
     return _sessions[session_id]
 
 
+def _infer_doc_type(raw_text: str, fields: dict, scenario: Optional[str]) -> str:
+    text = (raw_text or "").lower()
+    field_keys = set(fields.keys())
+
+    invoice_fields = {"fecha", "monto", "nombre_proveedor", "nit_proveedor"}
+    has_invoice_fields = len(invoice_fields & field_keys) >= 2
+
+    if has_invoice_fields or "factura de venta" in text:
+        if scenario == "C":
+            return "factura_servicio"
+        return "factura"
+
+    if "pqr" in text or "radicado" in text or "petición" in text:
+        return "radicado_pqr"
+
+    if "extracto" in text or "estado de cuenta" in text:
+        return "extracto_bancario"
+
+    if "cobro" in text and ("indebido" in text or "no autorizado" in text):
+        return "soporte_cobro"
+
+    if not has_invoice_fields and any(
+        w in text for w in ["defecto", "daño", "roto", "no funciona", "averiado"]
+    ):
+        return "evidencia_defecto"
+
+    if "factura" in text or "venta" in text or "compra" in text:
+        if scenario == "C":
+            return "factura_servicio"
+        return "factura"
+
+    return "factura"
+
+
 @router.post("/start")
 async def start_session():
-    """Start a new intake session. Returns session_id and greeting."""
     session_id = str(uuid.uuid4())
     session = _get_or_create_session(session_id)
-    greeting = session["interviewer"].start()
+    interviewer: IntakeInterviewer = session["interviewer"]
+    greeting = interviewer.start()
+
     _pipeline_log(session_id, "INTAKE", "session.started", greeting=greeting)
     return {
         "session_id": session_id,
@@ -93,29 +141,51 @@ async def start_session():
 
 @router.post("/message")
 async def send_message(body: IntakeRequest):
-    """Send a user message to the intake interviewer."""
+    """Handle messages across all stages: INTAKE, DOCS_NEEDED, WHATSAPP_OPTIN."""
     session = _get_or_create_session(body.session_id)
     _pipeline_log(
         body.session_id,
-        "INTAKE",
+        "MESSAGE",
         "message.received",
         has_audio=bool(body.audio_base64),
         user_message=body.message,
         current_stage=session.get("stage"),
     )
 
-    # Handle audio transcription
     user_message = body.message
     if body.audio_base64:
         t_audio = time.perf_counter()
         user_message = _transcribe_audio(body.audio_base64) or body.message
         _pipeline_log(
-            body.session_id,
-            "INTAKE",
-            "audio.transcribed",
+            body.session_id, "TRANSCRIBE", "audio.transcribed",
             elapsed_ms=round((time.perf_counter() - t_audio) * 1000, 2),
             transcribed_text=user_message,
         )
+
+    current_stage = session["stage"]
+
+    if current_stage == "WHATSAPP_OPTIN":
+        return _handle_whatsapp_response(session, user_message)
+
+    if current_stage == "COMPLETE":
+        return {
+            "session_id": body.session_id,
+            "agent_reply": f"Tu caso ya fue registrado con el número {session['case_id']}. Un abogado lo revisará pronto.",
+            "stage": "COMPLETE",
+            "next_action": "none",
+            "classification": session.get("classification"),
+        }
+
+    if current_stage == "DOCS_NEEDED":
+        listo_keywords = ["listo", "no tengo más", "no tengo mas", "eso es todo", "procesar", "ya estoy listo", "ya terminé"]
+        if any(k in user_message.lower() for k in listo_keywords):
+            return {
+                "session_id": body.session_id,
+                "agent_reply": "Entendido. Presiona el botón 'Procesar mi reclamación' para que preparemos tu solicitud.",
+                "stage": "DOCS_NEEDED",
+                "next_action": "ready_to_finalize",
+                "classification": session.get("classification"),
+            }
 
     interviewer: IntakeInterviewer = session["interviewer"]
     t_intake = time.perf_counter()
@@ -125,13 +195,12 @@ async def send_message(body: IntakeRequest):
         "INTAKE",
         "agent.responded",
         elapsed_ms=round((time.perf_counter() - t_intake) * 1000, 2),
-        stage=result.get("stage"),
+        result_stage=result.get("stage"),
         next_action=result.get("next_action"),
         classification=result.get("classification") or {},
         agent_reply=result.get("agent_reply", ""),
     )
 
-    # Accumulate narrative
     session["narrative"] += f" {user_message}"
     session["stage"] = result["stage"]
 
@@ -147,36 +216,97 @@ async def send_message(body: IntakeRequest):
     }
 
 
+def _handle_whatsapp_response(session: dict, message: str) -> dict:
+    session_id = session["session_id"]
+    text = message.strip().lower()
+
+    negative = ["no", "nah", "nel", "no gracias", "paso"]
+    if any(n == text or text.startswith(n + " ") for n in negative):
+        session["stage"] = "COMPLETE"
+        return {
+            "session_id": session_id,
+            "agent_reply": f"Está bien. Tu caso quedó registrado con el número *{session['case_id']}*. Puedes volver cuando quieras para consultar el estado. ¡Mucho ánimo!",
+            "stage": "COMPLETE",
+            "next_action": "none",
+            "classification": session.get("classification"),
+        }
+
+    import re
+    phone_match = re.search(r"(\+?\d[\d\s\-]{7,14}\d)", message)
+    if phone_match:
+        phone = re.sub(r"[\s\-]", "", phone_match.group(1))
+        if not phone.startswith("+"):
+            phone = "+57" + phone
+        session["whatsapp_number"] = phone
+        session["stage"] = "COMPLETE"
+
+        try:
+            from backend.api.notify_routes import _get_twilio_client, WHATSAPP_FROM, EVENT_MESSAGES
+            msg_text = EVENT_MESSAGES["CASE_CREATED"].format(
+                name=session.get("document_fields", {}).get("nombre_consumidor", "Consumidor"),
+                case_id=session["case_id"],
+            )
+            client = _get_twilio_client()
+            if client:
+                client.messages.create(body=msg_text, from_=WHATSAPP_FROM, to=f"whatsapp:{phone}")
+                _pipeline_log(session_id, "NOTIFY", "whatsapp.sent", phone=phone)
+            else:
+                print(f"[TWILIO MOCK] To {phone}: {msg_text}")
+                _pipeline_log(session_id, "NOTIFY", "whatsapp.mock", phone=phone, message=msg_text)
+        except Exception as e:
+            _pipeline_log(session_id, "NOTIFY", "whatsapp.error", error=str(e))
+
+        return {
+            "session_id": session_id,
+            "agent_reply": f"Listo, te enviaremos actualizaciones al WhatsApp {phone}. Tu número de caso es *{session['case_id']}*. ¡Mucho ánimo con tu reclamación!",
+            "stage": "COMPLETE",
+            "next_action": "none",
+            "classification": session.get("classification"),
+        }
+
+    positive = ["si", "sí", "dale", "claro", "ok", "bueno", "vale", "por favor"]
+    if any(p == text or text.startswith(p + " ") or text.startswith(p + ",") for p in positive):
+        return {
+            "session_id": session_id,
+            "agent_reply": "Por favor escribe tu número de WhatsApp con código de país (ej: +573001234567).",
+            "stage": "WHATSAPP_OPTIN",
+            "next_action": "collect_phone",
+            "classification": session.get("classification"),
+        }
+
+    return {
+        "session_id": session_id,
+        "agent_reply": "¿Te gustaría recibir actualizaciones de tu caso por WhatsApp? Responde 'sí' o 'no'.",
+        "stage": "WHATSAPP_OPTIN",
+        "next_action": "whatsapp_confirm",
+        "classification": session.get("classification"),
+    }
+
+
 @router.post("/upload")
 async def upload_document(
     session_id: str = Form(...),
-    doc_type: str = Form("factura"),
+    doc_type: str = Form("auto"),
     file: UploadFile = File(...),
 ):
     """
-    Upload a document. Triggers document parsing + cross-validation + legal classification.
-    If document confidence < 0.70, returns blocked=True.
-    If pipeline completes successfully, returns case_id.
+    Upload a document. Parses and stores it. Does NOT run the full pipeline.
+    Returns extracted fields and what other documents are still needed.
     """
     session = _get_or_create_session(session_id)
 
     file_bytes = await file.read()
     _pipeline_log(
-        session_id,
-        "UPLOAD",
-        "document.received",
+        session_id, "UPLOAD", "document.received",
         filename=file.filename or "doc.pdf",
-        doc_type=doc_type,
-        bytes=len(file_bytes),
+        doc_type=doc_type, bytes=len(file_bytes),
     )
 
     parser = DocumentParser()
     t_parse = time.perf_counter()
     parse_result = parser.parse(file_bytes, file.filename or "doc.pdf", doc_type_hint=doc_type)
     _pipeline_log(
-        session_id,
-        "STAGE_3_DocumentParser",
-        "document.parsed",
+        session_id, "STAGE_3_DocumentParser", "document.parsed",
         elapsed_ms=round((time.perf_counter() - t_parse) * 1000, 2),
         confidence=parse_result.get("confidence"),
         blocked=parse_result.get("blocked"),
@@ -187,53 +317,116 @@ async def upload_document(
     session["document_fields"].update(parse_result.get("fields", {}))
     session["document_confidence"] = parse_result["confidence"]
 
+    scenario = ((session["classification"] or {}).get("scenario") or "A")
+    inferred_type = _infer_doc_type(
+        parse_result.get("raw_text", ""),
+        parse_result.get("fields", {}),
+        scenario,
+    )
+
     if parse_result["blocked"]:
-        session["stage"] = "ILLEGIBLE_BLOCKED"
-        _pipeline_log(
-            session_id,
-            "STAGE_3_DocumentParser",
-            "blocked.illegible",
-            confidence=parse_result.get("confidence"),
-            threshold=0.70,
-        )
         return {
             "session_id": session_id,
-            "stage": "ILLEGIBLE_BLOCKED",
+            "stage": session["stage"],
             "confidence": parse_result["confidence"],
             "blocked": True,
-            "message": (
-                "No pudimos leer bien ese documento (calidad muy baja). "
-                "Un abogado lo revisará manualmente antes de continuar."
-            ),
+            "message": "No pude leer bien ese documento (calidad muy baja). Intenta subir una foto más clara o un PDF legible.",
         }
 
-    # Proceed with pipeline
+    session["uploaded_docs"].append({
+        "filename": file.filename or "doc.pdf",
+        "doc_type": inferred_type,
+        "confidence": parse_result["confidence"],
+        "fields": list(parse_result.get("fields", {}).keys()),
+    })
+
+    required = REQUIRED_DOCS_BY_SCENARIO.get(scenario, ["factura"])
+    uploaded_types = list(set(d["doc_type"] for d in session["uploaded_docs"]))
+    missing = [d for d in required if d not in uploaded_types]
+
+    session["stage"] = "DOCS_NEEDED"
+
+    extracted_summary = []
+    for k, v in parse_result.get("fields", {}).items():
+        if v:
+            extracted_summary.append(f"- {k}: {v}")
+
+    type_label = DOC_LABELS.get(inferred_type, inferred_type)
+    summary_block = "\n".join(extracted_summary[:8])
+
+    if missing:
+        missing_labels = [DOC_LABELS.get(d, d) for d in missing]
+        msg = (
+            f"Recibí tu {type_label} ({file.filename}).\n"
+            f"Datos extraídos:\n{summary_block}\n\n"
+            f"Para completar tu caso, también necesito:\n" +
+            "\n".join(f"- {lbl}" for lbl in missing_labels) +
+            "\n\nSúbelos con el botón de adjuntar, o presiona 'Procesar mi reclamación' si no los tienes."
+        )
+    else:
+        msg = (
+            f"Recibí tu {type_label} ({file.filename}).\n"
+            f"Datos extraídos:\n{summary_block}\n\n"
+            "Ya tengo todos los documentos necesarios. "
+            "Presiona 'Procesar mi reclamación' para continuar."
+        )
+
+    return {
+        "session_id": session_id,
+        "stage": "DOCS_NEEDED",
+        "confidence": parse_result["confidence"],
+        "blocked": False,
+        "uploaded_docs": uploaded_types,
+        "missing_docs": missing,
+        "extracted_fields": parse_result.get("fields", {}),
+        "message": msg,
+    }
+
+
+@router.post("/finalize")
+async def finalize_pipeline(body: dict):
+    """
+    Run the full pipeline: cross-validation, classification, draft, validation, case packaging.
+    Called when the user confirms all documents are uploaded.
+    Requires at least one successfully parsed document.
+    """
+    session_id = body.get("session_id", "")
+    session = _sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Sesión no encontrada")
+
+    if session["stage"] == "COMPLETE":
+        return {
+            "session_id": session_id,
+            "case_id": session["case_id"],
+            "stage": "COMPLETE",
+            "message": f"Tu caso ya fue registrado: {session['case_id']}",
+        }
+
+    if not session.get("uploaded_docs"):
+        raise HTTPException(
+            status_code=400,
+            detail="Debes subir al menos un documento antes de procesar la reclamación.",
+        )
+
     narrative = session["narrative"].strip() or "Sin relato disponible."
+    fields = session["document_fields"]
     prelim_scenario = (session["classification"] or {}).get("scenario")
     has_pqr = "pqr" in narrative.lower() or "radicado" in narrative.lower()
 
     t_cross = time.perf_counter()
-    cross_val = cross_validate(narrative, parse_result["fields"])
+    cross_val = cross_validate(narrative, fields)
     _pipeline_log(
-        session_id,
-        "STAGE_4_EvidenceCrossValidator",
-        "cross.validation.completed",
+        session_id, "STAGE_4_EvidenceCrossValidator", "cross.validation.completed",
         elapsed_ms=round((time.perf_counter() - t_cross) * 1000, 2),
         discrepancies=cross_val.get("discrepancies", []),
         cross_validation_passed=cross_val.get("cross_validation_passed"),
     )
 
     t_class = time.perf_counter()
-    legal_class = classify(
-        narrative,
-        parse_result["fields"],
-        preliminary_scenario=prelim_scenario,
-        has_pqr=has_pqr,
-    )
+    legal_class = classify(narrative, fields, preliminary_scenario=prelim_scenario, has_pqr=has_pqr)
     _pipeline_log(
-        session_id,
-        "STAGE_5_LegalClassifier",
-        "legal.classification.completed",
+        session_id, "STAGE_5_LegalClassifier", "legal.classification.completed",
         elapsed_ms=round((time.perf_counter() - t_class) * 1000, 2),
         scenario=legal_class.get("scenario"),
         claim_valid=legal_class.get("claim_valid"),
@@ -242,23 +435,18 @@ async def upload_document(
     )
 
     t_draft = time.perf_counter()
-    draft_formal = generate_formal_draft(
-        narrative, parse_result["fields"], legal_class, {}
-    )
+    draft_formal = generate_formal_draft(narrative, fields, legal_class, {})
     _pipeline_log(
-        session_id,
-        "STAGE_6_ComplaintDraftGenerator",
-        "formal.draft.generated",
+        session_id, "STAGE_6_ComplaintDraftGenerator", "formal.draft.generated",
         elapsed_ms=round((time.perf_counter() - t_draft) * 1000, 2),
         formal_draft=draft_formal,
     )
 
+    consumer_name = fields.get("nombre_consumidor", "Consumidor")
     t_simple = time.perf_counter()
-    draft_simple = generate_simple_explanation(draft_formal, session["document_fields"].get("nombre_consumidor", "Rosa"))
+    draft_simple = generate_simple_explanation(draft_formal, consumer_name)
     _pipeline_log(
-        session_id,
-        "STAGE_6_ComplaintDraftGenerator",
-        "simple.explanation.generated",
+        session_id, "STAGE_6_ComplaintDraftGenerator", "simple.explanation.generated",
         elapsed_ms=round((time.perf_counter() - t_simple) * 1000, 2),
         simple_explanation=draft_simple,
     )
@@ -266,9 +454,7 @@ async def upload_document(
     t_validate = time.perf_counter()
     validation = validate_draft(draft_formal, legal_class)
     _pipeline_log(
-        session_id,
-        "STAGE_7_DraftValidator",
-        "draft.validated",
+        session_id, "STAGE_7_DraftValidator", "draft.validated",
         elapsed_ms=round((time.perf_counter() - t_validate) * 1000, 2),
         valid=validation.get("valid"),
         passed=validation.get("passed"),
@@ -277,18 +463,17 @@ async def upload_document(
         critical_failures=validation.get("critical_failures", []),
     )
 
-    # Assemble consumer/provider data from session + extracted fields
-    fields = session["document_fields"]
+    intake_class = session["classification"] or {}
     consumer_data = {
-        "name": fields.get("nombre_consumidor", ""),
-        "cedula": fields.get("cedula", ""),
-        "address": "",
-        "phone": "",
-        "email": "",
+        "name": fields.get("nombre_consumidor") or intake_class.get("consumer_name", ""),
+        "cedula": fields.get("cedula") or intake_class.get("consumer_cedula", ""),
+        "address": intake_class.get("consumer_address", ""),
+        "phone": intake_class.get("consumer_phone", ""),
+        "email": intake_class.get("consumer_email", ""),
     }
     provider_data = {
-        "name": fields.get("nombre_proveedor", ""),
-        "nit": fields.get("nit_proveedor", ""),
+        "name": fields.get("nombre_proveedor") or intake_class.get("provider_name", ""),
+        "nit": fields.get("nit_proveedor") or intake_class.get("provider_nit", ""),
         "address": "",
     }
 
@@ -297,8 +482,8 @@ async def upload_document(
         session_id=session_id,
         narrative=narrative,
         intake_classification=session["classification"] or {},
-        document_fields=parse_result["fields"],
-        document_confidence=parse_result["confidence"],
+        document_fields=fields,
+        document_confidence=session["document_confidence"],
         cross_validation=cross_val,
         legal_classification=legal_class,
         formal_draft=draft_formal,
@@ -308,9 +493,7 @@ async def upload_document(
         provider_data=provider_data,
     )
     _pipeline_log(
-        session_id,
-        "STAGE_8_CasePackager",
-        "case.packaged",
+        session_id, "STAGE_8_CasePackager", "case.packaged",
         elapsed_ms=round((time.perf_counter() - t_pack) * 1000, 2),
         case_id=pkg.get("case_id"),
         case_status=(pkg.get("case") or {}).get("status"),
@@ -318,30 +501,30 @@ async def upload_document(
     )
 
     session["case_id"] = pkg["case_id"]
-    session["stage"] = "COMPLETE"
-    _pipeline_log(session_id, "COMPLETE", "pipeline.finished", case_id=pkg.get("case_id"))
+    session["stage"] = "WHATSAPP_OPTIN"
+    _pipeline_log(session_id, "PIPELINE_DONE", "pipeline.finished", case_id=pkg.get("case_id"))
+
+    whatsapp_msg = (
+        f"\n\n¿Te gustaría recibir actualizaciones de tu caso por WhatsApp? "
+        f"Responde 'sí' y tu número, o 'no' si prefieres no recibir notificaciones."
+    )
 
     return {
         "session_id": session_id,
         "case_id": pkg["case_id"],
-        "stage": "COMPLETE",
-        "confidence": parse_result["confidence"],
+        "stage": "WHATSAPP_OPTIN",
+        "confidence": session["document_confidence"],
         "blocked": False,
         "scenario": legal_class.get("scenario"),
         "claim_valid": legal_class.get("claim_valid"),
         "simple_explanation": draft_simple,
         "validation_passed": validation["valid"],
-        "message": (
-            draft_simple
-            if legal_class.get("claim_valid")
-            else "Tu caso está siendo revisado por un abogado."
-        ),
+        "message": draft_simple + whatsapp_msg,
     }
 
 
 @router.post("/transcribe")
 async def transcribe_audio(file: UploadFile = File(...)):
-    """Transcribe audio file using Groq Whisper."""
     try:
         t0 = time.perf_counter()
         from backend.agents.groq_client import get_groq
@@ -353,9 +536,7 @@ async def transcribe_audio(file: UploadFile = File(...)):
             language="es",
         )
         _pipeline_log(
-            "N/A",
-            "TRANSCRIBE",
-            "audio.transcribed",
+            "N/A", "TRANSCRIBE", "audio.transcribed",
             filename=file.filename or "audio.wav",
             elapsed_ms=round((time.perf_counter() - t0) * 1000, 2),
             text=transcript.text,
@@ -368,7 +549,6 @@ async def transcribe_audio(file: UploadFile = File(...)):
 
 @router.get("/session/{session_id}")
 async def get_session(session_id: str):
-    """Get current session state."""
     session = _sessions.get(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Sesión no encontrada")
@@ -381,7 +561,6 @@ async def get_session(session_id: str):
 
 
 def _transcribe_audio(audio_base64: str) -> Optional[str]:
-    """Transcribe base64-encoded audio."""
     try:
         t0 = time.perf_counter()
         from backend.agents.groq_client import get_groq
@@ -393,9 +572,7 @@ def _transcribe_audio(audio_base64: str) -> Optional[str]:
             language="es",
         )
         _pipeline_log(
-            "N/A",
-            "TRANSCRIBE",
-            "audio.base64.transcribed",
+            "N/A", "TRANSCRIBE", "audio.base64.transcribed",
             elapsed_ms=round((time.perf_counter() - t0) * 1000, 2),
             text=transcript.text,
         )
