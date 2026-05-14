@@ -1,9 +1,0 @@
-{
-  "draft_allowed": true,
-  "final_allowed": false,
-  "reasons": [
-    "blocking_issues",
-    "unverified_citations",
-    "approval_pending"
-  ]
-}
