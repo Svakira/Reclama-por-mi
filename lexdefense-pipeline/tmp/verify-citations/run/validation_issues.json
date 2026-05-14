@@ -1,0 +1,29 @@
+[
+  {
+    "issue_id": "AU-P-H-001",
+    "severity": "medium",
+    "category": "evidence",
+    "location": "P-H-001",
+    "description": "Paragraph still depends on missing source review.",
+    "suggested_fix": "Attach supporting evidence or preserve explicit review marker.",
+    "requires_human": true
+  },
+  {
+    "issue_id": "AU-P-H-002",
+    "severity": "medium",
+    "category": "evidence",
+    "location": "P-H-002",
+    "description": "Paragraph still depends on missing source review.",
+    "suggested_fix": "Attach supporting evidence or preserve explicit review marker.",
+    "requires_human": true
+  },
+  {
+    "issue_id": "AU-LC-001",
+    "severity": "high",
+    "category": "citation",
+    "location": "LC-001",
+    "description": "Citation remains unverified.",
+    "suggested_fix": "Verify against local corpus or keep the lawyer review marker.",
+    "requires_human": true
+  }
+]

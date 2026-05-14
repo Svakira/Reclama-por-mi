@@ -1,0 +1,53 @@
+[
+  {
+    "fact_id": "H-001",
+    "original_number": "1",
+    "original_text": "Existe una poliza 123.",
+    "atomic_claims": [
+      {
+        "claim_id": "H-001-C-01",
+        "text": "Existe una poliza 123.",
+        "classification": "no_me_consta",
+        "reason": "La aseguradora no puede admitir responsabilidad ni cobertura automaticamente.",
+        "evidence_for": [],
+        "evidence_against": [],
+        "missing_evidence": [
+          "Texto completo de la poliza",
+          "Condiciones de cobertura"
+        ],
+        "proposed_response": "No me consta y se solicita valoracion probatoria estricta.",
+        "risk_level": "medio",
+        "human_question": "Existe soporte documental suficiente para esta afirmacion?"
+      }
+    ],
+    "overall_classification": "no_me_consta",
+    "proposed_response": "No me consta y se solicita valoracion probatoria estricta.",
+    "sources": [],
+    "human_review_required": true
+  },
+  {
+    "fact_id": "H-002",
+    "original_number": "2",
+    "original_text": "Ocurrio un accidente.",
+    "atomic_claims": [
+      {
+        "claim_id": "H-002-C-01",
+        "text": "Ocurrio un accidente.",
+        "classification": "no_me_consta",
+        "reason": "La aseguradora no puede admitir responsabilidad ni cobertura automaticamente.",
+        "evidence_for": [],
+        "evidence_against": [],
+        "missing_evidence": [
+          "Soporte documental especifico"
+        ],
+        "proposed_response": "No me consta y se solicita valoracion probatoria estricta.",
+        "risk_level": "medio",
+        "human_question": "Existe soporte documental suficiente para esta afirmacion?"
+      }
+    ],
+    "overall_classification": "no_me_consta",
+    "proposed_response": "No me consta y se solicita valoracion probatoria estricta.",
+    "sources": [],
+    "human_review_required": true
+  }
+]

@@ -1,0 +1,2 @@
+HECHO 1. Existe una poliza 123.
+HECHO 2. Ocurrio un accidente.

@@ -1,0 +1,3 @@
+evidence_id,fact_id,claim_id,classification,evidence_for,evidence_against,missing_evidence,proposed_response,risk_level,human_question
+E-H-001-C-01,H-001,H-001-C-01,no_me_consta,,,Texto completo de la poliza | Condiciones de cobertura,No me consta y se solicita valoracion probatoria estricta.,medio,Existe soporte documental suficiente para esta afirmacion?
+E-H-002-C-01,H-002,H-002-C-01,no_me_consta,,,Soporte documental especifico,No me consta y se solicita valoracion probatoria estricta.,medio,Existe soporte documental suficiente para esta afirmacion?

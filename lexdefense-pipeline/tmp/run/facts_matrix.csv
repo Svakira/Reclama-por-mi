@@ -1,0 +1,3 @@
+fact_id,original_number,original_text,overall_classification,proposed_response
+H-001,1,Existe una poliza 123.,no_me_consta,No me consta y se solicita valoracion probatoria estricta.
+H-002,2,Ocurrio un accidente.,no_me_consta,No me consta y se solicita valoracion probatoria estricta.
